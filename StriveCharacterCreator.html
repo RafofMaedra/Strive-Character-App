@@ -669,113 +669,6 @@
         </div>
       </div>
 
-      <!-- Bottom: collapsed by default -->
-      <div class="card" style="grid-area:rolls" id="cardRolls">
-        <div class="hd">
-          <div class="t">Tools</div>
-          <span class="pill">Collapsed by default</span>
-        </div>
-        <div class="bd" style="display:flex; flex-direction:column; gap:12px;">
-          <details id="detailsCheck">
-            <summary>
-              <span>Make a Check</span>
-              <span class="pill" id="checkPill">—</span>
-            </summary>
-            <div class="inner">
-              <div class="fields">
-                <div class="field span3">
-                  <label for="rollAttr">Attribute</label>
-                  <select id="rollAttr">
-                    <option value="Body">Body</option>
-                    <option value="Mind">Mind</option>
-                  </select>
-                </div>
-                <div class="field span6">
-                  <label for="rollSkill">Skill</label>
-                  <select id="rollSkill"></select>
-                </div>
-                <div class="field span3">
-                  <label for="rollBonus">Bonus Dice</label>
-                  <input id="rollBonus" type="number" min="0" step="1" value="0" />
-                </div>
-                <div class="field span12">
-                  <div class="row">
-                    <button class="primary" id="btnRoll" type="button">Roll</button>
-                    <button id="btnCopyRoll" type="button">Copy</button>
-                  </div>
-                </div>
-                <div class="field span12">
-                  <label for="rollOut">Output</label>
-                  <textarea id="rollOut" class="mono" readonly></textarea>
-                </div>
-              </div>
-            </div>
-          </details>
-
-          <details id="detailsDamage">
-            <summary>
-              <span>Take Damage</span>
-              <span class="pill" id="dmgPill">—</span>
-            </summary>
-            <div class="inner">
-              <div class="fields">
-                <div class="field span3">
-                  <label for="dmgQty">Amount</label>
-                  <input id="dmgQty" type="number" min="0" step="1" value="1" />
-                </div>
-                <div class="field span3">
-                  <label for="dmgMode">Mode</label>
-                  <select id="dmgMode">
-                    <option value="d6">d6 × Amount</option>
-                    <option value="flat">Flat</option>
-                  </select>
-                </div>
-                <div class="field span3">
-                  <label for="dmgTarget">Target</label>
-                  <select id="dmgTarget">
-                    <option value="Grit">Grit</option>
-                    <option value="Focus">Focus</option>
-                  </select>
-                </div>
-                <div class="field span3">
-                  <label for="dmgDR">DR</label>
-                  <input id="dmgDR" type="number" min="0" step="1" value="0" />
-                </div>
-                <div class="field span12">
-                  <div class="row">
-                    <button class="primary" id="btnDamage" type="button">Roll &amp; Apply</button>
-                  </div>
-                </div>
-                <div class="field span12">
-                  <label for="dmgOut">Log</label>
-                  <textarea id="dmgOut" class="mono" readonly style="min-height:110px;"></textarea>
-                </div>
-              </div>
-            </div>
-          </details>
-
-          <details id="detailsQuickRef">
-            <summary>
-              <span>Quick Reference</span>
-              <span class="pill">Copy/paste</span>
-            </summary>
-            <div class="inner">
-              <div class="fields">
-                <div class="field span12">
-                  <label for="qrOut">Skills &amp; Features</label>
-                  <textarea id="qrOut" class="mono" readonly style="min-height:160px;"></textarea>
-                </div>
-                <div class="field span12">
-                  <div class="row">
-                    <button id="btnCopyQR" type="button">Copy</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </details>
-
-        </div>
-      </div>
 
     </div>
   </section>
@@ -1017,16 +910,6 @@
 
     // skills
     $("btnAddSkill").addEventListener("click", ()=>openSkillEditor(null));
-
-    // rollers
-    $("btnRoll").addEventListener("click", doRoll);
-    $("btnCopyRoll").addEventListener("click", ()=>{
-      navigator.clipboard?.writeText($("rollOut").value || "").then(()=>toast("Copied")).catch(()=>toast("Copy failed"));
-    });
-    $("btnDamage").addEventListener("click", doDamage);
-    $("btnCopyQR").addEventListener("click", ()=>{
-      navigator.clipboard?.writeText($("qrOut").value || "").then(()=>toast("Copied")).catch(()=>toast("Copy failed"));
-    });
   }
 
   function normaliseDerived(){
@@ -1098,8 +981,6 @@
   function refreshSkills(){
     const list = $("skillsList");
     list.innerHTML = "";
-    const rollSkill = $("rollSkill");
-    rollSkill.innerHTML = "";
 
     const skills = Array.isArray(data.skills) ? data.skills : [];
     if(skills.length === 0){
@@ -1107,11 +988,6 @@
       empty.className = "pill";
       empty.textContent = "No skills yet";
       list.appendChild(empty);
-
-      const opt = document.createElement("option");
-      opt.value = "";
-      opt.textContent = "—";
-      rollSkill.appendChild(opt);
       return;
     }
 
@@ -1160,38 +1036,13 @@
       item.appendChild(left);
       item.appendChild(btns);
       list.appendChild(item);
-
-      const opt = document.createElement("option");
-      opt.value = String(i);
-      opt.textContent = `(${tag}) ${s.name || "Unnamed"}`;
-      rollSkill.appendChild(opt);
     }
   }
 
-  function refreshQuickRef(){
-    const skills = (data.skills||[]).map(s => `• (${s.tag||"B"}) ${s.name||"Unnamed"}`).join("\n");
-    const feats = (data.features_text||"")
-      .split(/\r?\n/)
-      .map(l=>l.trim())
-      .filter(Boolean)
-      .map(l=>l.startsWith("•") ? l : `• ${l}`)
-      .join("\n");
-
-    const out = [
-      "Skills:",
-      skills || "• —",
-      "",
-      "Features:",
-      feats || "• —"
-    ].join("\n");
-
-    $("qrOut").value = out;
-  }
 
   function refreshAll(){
     refreshVitals();
     refreshSkills();
-    refreshQuickRef();
     if($("detailsBig").value !== data.details) $("detailsBig").value = data.details || "";
   }
 
@@ -1926,70 +1777,6 @@
   }
   function countSuccesses(rolls, threshold){
     return rolls.reduce((acc,r)=>acc + (r >= threshold ? 1 : 0), 0);
-  }
-  function doRoll(){
-    const attr = $("rollAttr").value;
-    const idx = safeInt($("rollSkill").value, -1);
-    const bonus = Math.max(0, safeInt($("rollBonus").value, 0));
-
-    const baseDice = (attr === "Body") ? (data.body||1) : (data.mind||1);
-    const skillDice = (idx >= 0 && data.skills[idx]) ? clamp(safeInt(data.skills[idx].dice,1),1,6) : 0;
-    const totalDice = baseDice + skillDice + bonus;
-
-    const rolls = rollD6(totalDice);
-    const succ = countSuccesses(rolls, SUCCESS_THRESHOLD);
-
-    const skillName = (idx>=0 && data.skills[idx]) ? data.skills[idx].name : "—";
-    const msg = [
-      `Attribute: ${attr} (${baseDice}d6)`,
-      `Skill: ${skillName} (${skillDice}d6)`,
-      `Bonus: ${bonus}d6`,
-      `Threshold: ${SUCCESS_THRESHOLD}+`,
-      `Rolls: ${rolls.join(", ")}`,
-      `Successes: ${succ}`
-    ].join("\n");
-
-    $("rollOut").value = msg;
-    $("checkPill").textContent = `${succ} succ`;
-    saveAutosave();
-  }
-
-  function doDamage(){
-    const qty = Math.max(0, safeInt($("dmgQty").value, 0));
-    const mode = $("dmgMode").value;
-    const target = $("dmgTarget").value;
-    const dr = Math.max(0, safeInt($("dmgDR").value, 0));
-
-    let raw = 0;
-    let rolls = [];
-    if(mode === "flat"){
-      raw = qty;
-    }else{
-      rolls = rollD6(qty);
-      raw = rolls.reduce((a,b)=>a+b,0);
-    }
-    const dmg = Math.max(0, raw - dr);
-
-    if(target === "Grit"){
-      data.grit_cur = clamp(data.grit_cur - dmg, 0, data.grit_max);
-      $("gritCur").value = String(data.grit_cur);
-    }else{
-      data.focus_cur = clamp(data.focus_cur - dmg, 0, data.focus_max);
-      $("focusCur").value = String(data.focus_cur);
-    }
-    refreshVitals();
-
-    const msg = [
-      `Target: ${target}`,
-      `Mode: ${mode === "flat" ? "Flat" : `d6 × ${qty}`}`,
-      mode === "flat" ? `Raw: ${raw}` : `Rolls: ${rolls.join(", ")}\nRaw: ${raw}`,
-      `DR: ${dr}`,
-      `Damage taken: ${dmg}`
-    ].join("\n");
-
-    $("dmgOut").value = msg;
-    $("dmgPill").textContent = `${target} -${dmg}`;
-    saveAutosave();
   }
 
   // --- JSON export/import

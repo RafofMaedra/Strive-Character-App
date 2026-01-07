@@ -2109,12 +2109,14 @@
     c.clearRect(0,0,W,H);
     c.save();
 
-    // Stronger corner masking (radius doubled)
-    const cornerR = 46 * s;
+    // Border thickness (keep your doubled intent)
+    const borderW = 30 * s;
 
-    // FIX: corners only — make the mask slightly MORE rounded than the border path
-    // so no corner pixels can sit outside the visual border curve.
-    // If you still see corner bleed, increase 24*s slightly (e.g. 28*s). If it clips too far in, reduce it (e.g. 18*s).
+    // FIX: corner radius MUST be > borderW, otherwise the inner cutout radius becomes 0 (square corners).
+    // Keep at least ~18*s of inner rounding so the inside edge stays curved.
+    const cornerR = Math.max(46 * s, borderW + (18 * s));
+
+    // Slightly rounder mask than border path to avoid corner pixels peeking outside.
     const maskCornerR = cornerR + (1 * s);
 
     roundRectPath(c, 0,0,W,H, maskCornerR);
@@ -2134,14 +2136,34 @@
 
     c.restore();
 
-    // Border thickness doubled
-    c.save();
-    roundRectPath(c, 0,0,W,H, cornerR);
-    c.strokeStyle = "rgba(0,0,0,0.95)";
-    c.lineWidth = 60 * s;  // was 28
-    c.stroke();
+    // --- Border as an INSIDE ring (outer minus inner) using even-odd fill
+    const inset = Math.min(borderW, (Math.min(W,H) / 2) - 1);
+    const innerR = Math.max(1, cornerR - inset);
 
-    roundRectPath(c, 0,0,W,H, cornerR);
+    // Local helper: append a round-rect subpath WITHOUT resetting the path
+    function addRoundRectSubpath(ctx2, x, y, w, h, r){
+      const rr = Math.min(r, w/2, h/2);
+      ctx2.moveTo(x+rr, y);
+      ctx2.arcTo(x+w, y, x+w, y+h, rr);
+      ctx2.arcTo(x+w, y+h, x, y+h, rr);
+      ctx2.arcTo(x, y+h, x, y, rr);
+      ctx2.arcTo(x, y, x+w, y, rr);
+      ctx2.closePath();
+    }
+
+    c.save();
+    c.beginPath();
+    addRoundRectSubpath(c, 0, 0, W, H, cornerR);
+    addRoundRectSubpath(c, inset, inset, W - inset*2, H - inset*2, innerR);
+    c.fillStyle = "rgba(0,0,0,0.95)";
+    c.fill("evenodd");
+    c.restore();
+
+    // Thin highlight stroke, inset so it stays fully inside
+    c.save();
+    const hiInset = inset * 0.5;
+    const hiR = Math.max(1, cornerR - hiInset);
+    roundRectPath(c, hiInset, hiInset, W - hiInset*2, H - hiInset*2, hiR);
     c.strokeStyle = "rgba(255,255,255,0.20)";
     c.lineWidth = Math.max(1, 4 * s);
     c.stroke();

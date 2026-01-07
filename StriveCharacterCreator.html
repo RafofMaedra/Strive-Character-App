@@ -1,0 +1,2590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Strive Character Creator</title>
+<style>
+  :root{
+    --bg:#0f1115;
+    --panel:#171a21;
+    --panel2:#11141a;
+    --text:#e9eef7;
+    --muted:#a9b4c3;
+    --border:rgba(255,255,255,.12);
+    --border2:rgba(255,255,255,.18);
+    --accent:#e2c36a;
+    --accent2:#70a7ff;
+    --danger:#ff5c5c;
+    --ok:#5cffb2;
+    --shadow: 0 14px 35px rgba(0,0,0,.35);
+    --r:16px;
+    --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family:var(--sans);
+    background:
+      radial-gradient(1000px 600px at 20% 0%, rgba(226,195,106,.10), transparent 60%),
+      radial-gradient(900px 700px at 95% 10%, rgba(112,167,255,.10), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Top bar (NOT sticky; scrolls away) */
+  header{
+    background: rgba(15,17,21,.92);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar{
+    max-width:1200px;
+    margin:0 auto;
+    padding:10px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    min-width:0;
+  }
+  .brand h1{
+    margin:0;
+    font-size:16px;
+    font-weight:800;
+    letter-spacing:.2px;
+    white-space:nowrap;
+  }
+  .badge{
+    font-size:12px;
+    padding:3px 8px;
+    border:1px solid var(--border);
+    border-radius:999px;
+    color:var(--muted);
+    background:rgba(255,255,255,.03);
+    white-space:nowrap;
+  }
+  .top-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+
+  button, .btn, select{
+    appearance:none;
+    border:1px solid var(--border2);
+    background: rgba(255,255,255,.04);
+    color:var(--text);
+    padding:8px 10px;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:700;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:hover, .btn:hover, select:hover{
+    background: rgba(255,255,255,.07);
+    border-color: rgba(255,255,255,.22);
+  }
+  button:active{ transform: translateY(1px); }
+  button.primary{
+    border-color: rgba(226,195,106,.45);
+    background: rgba(226,195,106,.12);
+  }
+  button.primary:hover{
+    background: rgba(226,195,106,.18);
+    border-color: rgba(226,195,106,.65);
+  }
+  button.danger{
+    border-color: rgba(255,92,92,.45);
+    background: rgba(255,92,92,.12);
+  }
+  button:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+  select{
+    padding-right:34px;
+    background-image:
+      linear-gradient(45deg, transparent 50%, rgba(255,255,255,.75) 50%),
+      linear-gradient(135deg, rgba(255,255,255,.75) 50%, transparent 50%);
+    background-position:
+      calc(100% - 16px) calc(50% - 3px),
+      calc(100% - 11px) calc(50% - 3px);
+    background-size:5px 5px, 5px 5px;
+    background-repeat:no-repeat;
+  }
+  option{ color:#000; }
+
+  /* Tabs */
+  .wrap{ max-width:1200px; margin:0 auto; padding:14px; }
+  .tabs{
+    display:flex;
+    gap:8px;
+    margin:10px 0 14px;
+    flex-wrap:wrap;
+  }
+  .tab{
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background: rgba(255,255,255,.03);
+    color:var(--muted);
+    cursor:pointer;
+    font-weight:800;
+  }
+  .tab.active{
+    color:var(--text);
+    border-color: rgba(226,195,106,.55);
+    background: rgba(226,195,106,.10);
+  }
+
+  /* Cards + fields */
+  .grid{
+    display:grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap:12px;
+    grid-template-areas:
+      "vitals portrait"
+      "core portrait"
+      "skills portrait"
+      "features details"
+      "wealth details"
+      "rolls rolls";
+  }
+  @media (max-width: 980px){
+    /* Mobile order: vitals ABOVE portrait; check/damage at bottom */
+    .grid{
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "vitals"
+        "portrait"
+        "core"
+        "skills"
+        "features"
+        "details"
+        "wealth"
+        "rolls";
+    }
+  }
+
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
+    border:1px solid var(--border);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .card .hd{
+    padding:10px 12px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    border-bottom:1px solid var(--border);
+    background: rgba(0,0,0,.18);
+  }
+  .card .hd .t{
+    font-weight:900;
+    letter-spacing:.2px;
+  }
+  .card .bd{ padding:12px; }
+
+  .fields{
+    display:grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap:10px;
+    align-items:end;
+  }
+  .field{ grid-column: span 6; min-width:0; }
+  .span12{ grid-column: span 12; }
+  .span8{ grid-column: span 8; }
+  .span4{ grid-column: span 4; }
+  .span3{ grid-column: span 3; }
+  .span2{ grid-column: span 2; }
+
+  @media (max-width: 520px){
+    .field{ grid-column: span 12; }
+    .span2,.span3,.span4,.span8{ grid-column: span 12; }
+  }
+
+  label{ display:block; font-size:12px; color:var(--muted); margin:0 0 4px 2px; }
+  input, textarea{
+    width:100%;
+    border-radius:12px;
+    border:1px solid var(--border);
+    padding:10px 10px;
+    background: rgba(255,255,255,.04);
+    color:var(--text);
+    outline:none;
+    font: inherit;
+  }
+  input:focus, textarea:focus{
+    border-color: rgba(226,195,106,.55);
+    box-shadow: 0 0 0 3px rgba(226,195,106,.12);
+  }
+  textarea{ min-height: 120px; resize: vertical; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .spacer{ flex:1; }
+
+  .pill{
+    display:inline-block;
+    padding:3px 8px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.15);
+    background: rgba(255,255,255,.03);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* Vitals strip (not sticky) */
+  .vitalsStrip{
+    display:grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap:10px;
+  }
+  @media (max-width: 980px){
+    .vitalsStrip{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  .vItem{
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background: rgba(0,0,0,.12);
+    min-width:0;
+  }
+  .vLabel{ font-size:12px; opacity:.75; }
+  .vValue{ font-weight:900; letter-spacing:.2px; margin-top:2px; }
+
+  /* Quick +/- controls for current Grit/Focus */
+  .vAdjust{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  .iconTiny{
+    width:26px;
+    height:26px;
+    padding:0;
+    border-radius:10px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:900;
+  }
+
+  /* Portrait stage: fixed aspect ratio, no squish */
+  .portraitStage{
+    position:relative;
+    width:100%;
+    aspect-ratio: 5 / 7; /* 2.5:3.5 */
+    border-radius: 14px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(0,0,0,.18);
+  }
+  canvas#portraitCanvas{
+    width:100%;
+    height:100%;
+    display:block;
+    touch-action:none; /* enable custom pinch/pan */
+  }
+  #btnPortraitLock{
+    position:absolute;
+    top:10px;
+    right:10px;
+    width:38px;
+    height:38px;
+    padding:0;
+    border-radius:999px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,.50);
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow: 0 6px 16px rgba(0,0,0,.35);
+  }
+  #btnPortraitLock.is-unlocked{
+    background: rgba(226,195,106,.18);
+    border-color: rgba(226,195,106,.45);
+  }
+
+  /* Skills list */
+  .list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .item{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    padding:10px 10px;
+    border:1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(0,0,0,.10);
+  }
+  .item .name{
+    font-weight:900;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .item .meta{
+    color:var(--muted);
+    font-size:12px;
+    margin-top:2px;
+  }
+  .item .left{
+    min-width:0;
+  }
+
+  /* Details (accordion) */
+  details{
+    border:1px solid var(--border);
+    border-radius: 14px;
+    overflow:hidden;
+    background: rgba(0,0,0,.08);
+  }
+  details summary{
+    list-style:none;
+    cursor:pointer;
+    padding:10px 12px;
+    font-weight:900;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background: rgba(0,0,0,.18);
+    border-bottom:1px solid var(--border);
+  }
+  details summary::-webkit-details-marker{ display:none; }
+  details .inner{ padding:12px; }
+
+  /* Modal */
+  .modalBackdrop{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.62);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding: 16px;
+    z-index: 500;
+  }
+  .modal{
+    width:min(720px, 100%);
+    max-height: min(92vh, 900px);
+    overflow:auto;
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border:1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 18px 60px rgba(0,0,0,.55);
+  }
+  .modal .mh{
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    border-bottom:1px solid var(--border);
+    background: rgba(0,0,0,.20);
+  }
+  .modal .mh .title{
+    font-weight:950;
+    letter-spacing:.2px;
+  }
+  .modal .mb{ padding:14px; }
+  .modal .mf{
+    padding:12px 14px;
+    border-top:1px solid var(--border);
+    background: rgba(0,0,0,.16);
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    flex-wrap:wrap;
+  }
+  .toast{
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 16px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,.70);
+    backdrop-filter: blur(10px);
+    color: var(--text);
+    display:none;
+    z-index: 800;
+  }
+  .toast.show{ display:block; }
+
+  /* Topbar: mobile compact (title + New + Menu) */
+  @media (max-width: 980px){
+    .badge{ display:none; }
+    .top-actions .desktopOnly{ display:none; }
+    .top-actions{ flex-wrap:nowrap; }
+    .brand h1{ font-size:15px; }
+  }
+  @media (min-width: 981px){
+    .top-actions .mobileOnly{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="topbar">
+    <div class="brand">
+      <h1>Strive Character Creator</h1>
+      <span class="badge" id="savedBadge">Saved ✓</span>
+    </div>
+
+    <div class="top-actions">
+      <!-- New menu (always visible; on mobile this is the main control) -->
+      <select id="newMenu" aria-label="New">
+        <option value="">New…</option>
+        <option value="blank">New (Blank)</option>
+        <option value="guided">New (Guided Creation)</option>
+      </select>
+
+      <!-- Mobile: compact menu button -->
+      <button class="mobileOnly" id="btnMenu" title="Menu">☰</button>
+
+      <!-- Desktop: keep key actions visible -->
+      <button class="desktopOnly" id="btnOpen">Open…</button>
+      <button class="desktopOnly primary" id="btnSave">Export JSON</button>
+      <button class="desktopOnly" id="btnExportCards">Export Card PNGs</button>
+      <button class="desktopOnly" id="btnLevelUp">Level Up</button>
+      <button class="desktopOnly danger" id="btnClearAutosave" title="Clears this browser's autosave copy.">Clear Autosave</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="tabs">
+    <div class="tab active" data-tab="character">Character</div>
+    <div class="tab" data-tab="details">Details</div>
+    <div class="tab" data-tab="about">About</div>
+  </div>
+
+  <!-- CHARACTER TAB -->
+  <section id="tab-character">
+    <div class="grid">
+
+      <div class="card" style="grid-area:vitals" id="cardVitals">
+        <div class="hd">
+          <div class="t">Quick Stats</div>
+          <span class="pill" id="autosavePill">Autosave: on</span>
+        </div>
+        <div class="bd">
+          <div class="vitalsStrip">
+            <div class="vItem">
+              <div class="vLabel">Name</div>
+              <div class="vValue" id="vName">—</div>
+            </div>
+            <div class="vItem">
+              <div class="vLabel">Level</div>
+              <div class="vValue" id="vLevel">1</div>
+            </div>
+            <div class="vItem">
+              <div class="vLabel">Body / Mind</div>
+              <div class="vValue" id="vStats">1 / 1</div>
+            </div>
+
+            <div class="vItem">
+              <div class="vLabel">Grit</div>
+              <div class="vAdjust">
+                <button class="iconTiny" id="btnGritMinus" type="button" title="Grit -1">−</button>
+                <div class="vValue" id="vGrit">4 / 4</div>
+                <button class="iconTiny" id="btnGritPlus" type="button" title="Grit +1">+</button>
+              </div>
+            </div>
+
+            <div class="vItem">
+              <div class="vLabel">Focus</div>
+              <div class="vAdjust">
+                <button class="iconTiny" id="btnFocusMinus" type="button" title="Focus -1">−</button>
+                <div class="vValue" id="vFocus">4 / 4</div>
+                <button class="iconTiny" id="btnFocusPlus" type="button" title="Focus +1">+</button>
+              </div>
+            </div>
+
+            <div class="vItem">
+              <div class="vLabel">Strive Dice</div>
+              <div class="vValue" id="vDice">0 / 0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-area:portrait" id="cardPortrait">
+        <div class="hd">
+          <div class="t">Portrait</div>
+          <span class="pill" id="zoomPill">1.00×</span>
+        </div>
+        <div class="bd">
+          <div class="portraitStage" id="portraitStage">
+            <canvas id="portraitCanvas" width="500" height="700"></canvas>
+            <button id="btnPortraitLock" type="button" title="Toggle portrait lock">🔒</button>
+          </div>
+
+          <div class="fields" style="margin-top:12px;">
+            <div class="field span12">
+              <label for="portraitFile">Load image</label>
+              <input id="portraitFile" type="file" accept="image/*" />
+            </div>
+            <div class="field span12">
+              <label>Zoom</label>
+              <div class="row">
+                <input id="portraitZoom" type="range" min="0.5" max="3" step="0.01" value="1.00" style="flex:1;" />
+                <button id="btnPortraitReset" type="button">Reset</button>
+                <button class="danger" id="btnPortraitClear" type="button">Clear</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card" style="grid-area:core" id="cardCore">
+        <div class="hd">
+          <div class="t">Core</div>
+          <span class="pill" id="kpiThreshold">Success: 3+</span>
+        </div>
+        <div class="bd">
+          <div class="fields">
+            <div class="field span8">
+              <label for="name">Name</label>
+              <input id="name" type="text" enterkeyhint="done" autocomplete="off" />
+            </div>
+            <div class="field span4">
+              <label for="level">Level</label>
+              <input id="level" type="number" min="1" max="12" step="1" />
+            </div>
+
+            <div class="field span6">
+              <label for="species">Species</label>
+              <input id="species" type="text" enterkeyhint="done" />
+            </div>
+            <div class="field span6">
+              <label for="background">Background</label>
+              <input id="background" type="text" enterkeyhint="done" />
+            </div>
+
+            <div class="field span3">
+              <label for="body">Body</label>
+              <input id="body" type="number" min="1" max="2" step="1" />
+            </div>
+            <div class="field span3">
+              <label for="mind">Mind</label>
+              <input id="mind" type="number" min="1" max="2" step="1" />
+            </div>
+
+            <div class="field span3">
+              <label for="gritMax">Grit (max)</label>
+              <input id="gritMax" type="number" min="0" step="1" />
+            </div>
+            <div class="field span3">
+              <label for="gritCur">Grit (current)</label>
+              <input id="gritCur" type="number" min="0" step="1" />
+            </div>
+
+            <div class="field span3">
+              <label for="focusMax">Focus (max)</label>
+              <input id="focusMax" type="number" min="0" step="1" />
+            </div>
+            <div class="field span3">
+              <label for="focusCur">Focus (current)</label>
+              <input id="focusCur" type="number" min="0" step="1" />
+            </div>
+
+            <div class="field span3">
+              <label for="dpMax">Strive Dice (max)</label>
+              <input id="dpMax" type="number" min="0" step="1" />
+            </div>
+            <div class="field span3">
+              <label for="dpCur">Strive Dice (current)</label>
+              <input id="dpCur" type="number" min="0" step="1" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-area:skills" id="cardSkills">
+        <div class="hd">
+          <div class="t">Skills</div>
+          <div class="row">
+            <button class="primary" id="btnAddSkill" type="button">Add</button>
+          </div>
+        </div>
+        <div class="bd">
+          <div class="list" id="skillsList"></div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-area:features" id="cardFeatures">
+        <div class="hd">
+          <div class="t">Features</div>
+        </div>
+        <div class="bd">
+          <label for="features">One per line</label>
+          <textarea id="features" class="mono" placeholder="• ..."></textarea>
+        </div>
+      </div>
+
+      <div class="card" style="grid-area:details" id="cardDetails">
+        <div class="hd">
+          <div class="t">Character Details</div>
+        </div>
+        <div class="bd">
+          <textarea id="details" placeholder="Gear, bonds, notes..."></textarea>
+        </div>
+      </div>
+
+      <div class="card" style="grid-area:wealth" id="cardWealth">
+        <div class="hd">
+          <div class="t">Wealth</div>
+        </div>
+        <div class="bd">
+          <div class="fields">
+            <div class="field span4">
+              <label for="wealthCoins">Coins</label>
+              <input id="wealthCoins" type="number" min="0" step="1" />
+            </div>
+            <div class="field span8">
+              <label for="wealthOther">Other</label>
+              <input id="wealthOther" type="text" enterkeyhint="done" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom: collapsed by default -->
+      <div class="card" style="grid-area:rolls" id="cardRolls">
+        <div class="hd">
+          <div class="t">Tools</div>
+          <span class="pill">Collapsed by default</span>
+        </div>
+        <div class="bd" style="display:flex; flex-direction:column; gap:12px;">
+          <details id="detailsCheck">
+            <summary>
+              <span>Make a Check</span>
+              <span class="pill" id="checkPill">—</span>
+            </summary>
+            <div class="inner">
+              <div class="fields">
+                <div class="field span3">
+                  <label for="rollAttr">Attribute</label>
+                  <select id="rollAttr">
+                    <option value="Body">Body</option>
+                    <option value="Mind">Mind</option>
+                  </select>
+                </div>
+                <div class="field span6">
+                  <label for="rollSkill">Skill</label>
+                  <select id="rollSkill"></select>
+                </div>
+                <div class="field span3">
+                  <label for="rollBonus">Bonus Dice</label>
+                  <input id="rollBonus" type="number" min="0" step="1" value="0" />
+                </div>
+                <div class="field span12">
+                  <div class="row">
+                    <button class="primary" id="btnRoll" type="button">Roll</button>
+                    <button id="btnCopyRoll" type="button">Copy</button>
+                  </div>
+                </div>
+                <div class="field span12">
+                  <label for="rollOut">Output</label>
+                  <textarea id="rollOut" class="mono" readonly></textarea>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details id="detailsDamage">
+            <summary>
+              <span>Take Damage</span>
+              <span class="pill" id="dmgPill">—</span>
+            </summary>
+            <div class="inner">
+              <div class="fields">
+                <div class="field span3">
+                  <label for="dmgQty">Amount</label>
+                  <input id="dmgQty" type="number" min="0" step="1" value="1" />
+                </div>
+                <div class="field span3">
+                  <label for="dmgMode">Mode</label>
+                  <select id="dmgMode">
+                    <option value="d6">d6 × Amount</option>
+                    <option value="flat">Flat</option>
+                  </select>
+                </div>
+                <div class="field span3">
+                  <label for="dmgTarget">Target</label>
+                  <select id="dmgTarget">
+                    <option value="Grit">Grit</option>
+                    <option value="Focus">Focus</option>
+                  </select>
+                </div>
+                <div class="field span3">
+                  <label for="dmgDR">DR</label>
+                  <input id="dmgDR" type="number" min="0" step="1" value="0" />
+                </div>
+                <div class="field span12">
+                  <div class="row">
+                    <button class="primary" id="btnDamage" type="button">Roll &amp; Apply</button>
+                  </div>
+                </div>
+                <div class="field span12">
+                  <label for="dmgOut">Log</label>
+                  <textarea id="dmgOut" class="mono" readonly style="min-height:110px;"></textarea>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details id="detailsQuickRef">
+            <summary>
+              <span>Quick Reference</span>
+              <span class="pill">Copy/paste</span>
+            </summary>
+            <div class="inner">
+              <div class="fields">
+                <div class="field span12">
+                  <label for="qrOut">Skills &amp; Features</label>
+                  <textarea id="qrOut" class="mono" readonly style="min-height:160px;"></textarea>
+                </div>
+                <div class="field span12">
+                  <div class="row">
+                    <button id="btnCopyQR" type="button">Copy</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- DETAILS TAB -->
+  <section id="tab-details" style="display:none;">
+    <div class="card">
+      <div class="hd">
+        <div class="t">Details</div>
+        <span class="pill">Freeform notes</span>
+      </div>
+      <div class="bd">
+        <textarea id="detailsBig" placeholder="Extra notes..."></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT TAB -->
+  <section id="tab-about" style="display:none;">
+    <div class="card">
+      <div class="hd"><div class="t">About</div></div>
+      <div class="bd">
+        <div style="line-height:1.5; color:var(--muted);">
+          <p style="margin-top:0;">
+            Skill tags:
+            <b style="color:var(--text)">(B)</b> Broad,
+            <b style="color:var(--text)">(N)</b> Narrow,
+            <b style="color:var(--text)">(S)</b> Signature.
+          </p>
+          <p>
+            Card Export creates two PNG files:
+            <b style="color:var(--text)">CHARACTERNAME_F.png</b> and
+            <b style="color:var(--text)">CHARACTERNAME_B.png</b>
+            using a 2.5:3.5 layout and transparent rounded corners.
+          </p>
+          <p>
+            Species traits (examples): Lowlight Vision, Underwater Adaptions, Heat Resistance.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Hidden file input for JSON import -->
+<input id="jsonFile" type="file" accept="application/json,.json" style="display:none;" />
+
+<!-- Modal -->
+<div class="modalBackdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Modal">
+    <div class="mh">
+      <div class="title" id="modalTitle">Menu</div>
+      <button id="btnModalClose" type="button" title="Close">✕</button>
+    </div>
+    <div class="mb" id="modalBody"></div>
+    <div class="mf" id="modalFooter"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const safeInt = (v, d=0) => {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : d;
+  };
+  const safeFloat = (v, d=0) => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : d;
+  };
+  const now = () => Date.now();
+
+  const STORAGE_KEY = "strive_character_creator_v4";
+  const SUCCESS_THRESHOLD = 3; // success on d6 >= 3 (matches your card-style "3+")
+  const FONT_SERIF = '"Times New Roman", Times, serif';
+
+  // Card export output size (PNG)
+  const EXPORT_CARD_W = 928;
+  const EXPORT_CARD_H = 1312;
+
+  // --- Data model
+  const data = {
+    name: "",
+    level: 1,
+    species: "",
+    background: "",
+    body: 1,
+    mind: 1,
+    grit_max: 4,
+    grit_cur: 4,
+    focus_max: 4,
+    focus_cur: 4,
+    dp_max: 0,
+    dp_cur: 0,
+    skills: [],
+    features_text: "",
+    details: "",
+    wealth_coins: 0,
+    wealth_other: "",
+    portrait: {
+      dataUrl: null,
+      zoom: 1.0,
+      offX: 0,
+      offY: 0,
+      locked: false
+    }
+  };
+
+  // --- Toast
+  let toastTimer = null;
+  function toast(msg){
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove("show"), 1400);
+  }
+
+  // --- Autosave
+  let lastSave = 0;
+  function saveAutosave(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      lastSave = now();
+      $("savedBadge").textContent = "Saved ✓";
+    }catch(e){
+      $("savedBadge").textContent = "Save failed";
+    }
+  }
+  function loadAutosave(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return false;
+      const obj = JSON.parse(raw);
+      if(!obj || typeof obj !== "object") return false;
+      Object.assign(data, obj);
+      if(obj.portrait) Object.assign(data.portrait, obj.portrait);
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+  function clearAutosave(){
+    localStorage.removeItem(STORAGE_KEY);
+    toast("Autosave cleared");
+    $("savedBadge").textContent = "—";
+  }
+
+  // --- UI binding
+  function bindInputs(){
+    const bind = (id, key, parser) => {
+      const el = $(id);
+      el.addEventListener("input", () => {
+        data[key] = parser ? parser(el.value) : el.value;
+        normaliseDerived();
+        refreshAll();
+        saveAutosave();
+      });
+    };
+
+    bind("name", "name", (v)=>String(v||""));
+    bind("level", "level", (v)=>clamp(safeInt(v,1), 1, 12));
+    bind("species", "species", (v)=>String(v||""));
+    bind("background", "background", (v)=>String(v||""));
+    bind("body", "body", (v)=>clamp(safeInt(v,1), 1, 2));
+    bind("mind", "mind", (v)=>clamp(safeInt(v,1), 1, 2));
+
+    bind("gritMax", "grit_max", (v)=>Math.max(0, safeInt(v,0)));
+    bind("gritCur", "grit_cur", (v)=>Math.max(0, safeInt(v,0)));
+    bind("focusMax", "focus_max", (v)=>Math.max(0, safeInt(v,0)));
+    bind("focusCur", "focus_cur", (v)=>Math.max(0, safeInt(v,0)));
+    bind("dpMax", "dp_max", (v)=>Math.max(0, safeInt(v,0)));
+    bind("dpCur", "dp_cur", (v)=>Math.max(0, safeInt(v,0)));
+
+    bind("features", "features_text", (v)=>String(v||""));
+    bind("details", "details", (v)=>String(v||""));
+    bind("detailsBig", "details", (v)=>String(v||""));
+    bind("wealthCoins", "wealth_coins", (v)=>Math.max(0, safeInt(v,0)));
+    bind("wealthOther", "wealth_other", (v)=>String(v||""));
+
+    // quick +/- vitals
+    $("btnGritMinus").addEventListener("click", ()=>{ data.grit_cur = clamp(data.grit_cur-1, 0, data.grit_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
+    $("btnGritPlus").addEventListener("click", ()=>{ data.grit_cur = clamp(data.grit_cur+1, 0, data.grit_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
+    $("btnFocusMinus").addEventListener("click", ()=>{ data.focus_cur = clamp(data.focus_cur-1, 0, data.focus_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
+    $("btnFocusPlus").addEventListener("click", ()=>{ data.focus_cur = clamp(data.focus_cur+1, 0, data.focus_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
+
+    // New menu
+    $("newMenu").addEventListener("change", () => {
+      const v = $("newMenu").value;
+      $("newMenu").value = "";
+      if(v === "blank") newBlank();
+      if(v === "guided") openGuidedCreation();
+    });
+
+    // Menu / modal actions
+    $("btnMenu").addEventListener("click", openMobileMenu);
+
+    $("btnOpen").addEventListener("click", ()=>$("jsonFile").click());
+    $("jsonFile").addEventListener("change", onOpenJson);
+
+    $("btnSave").addEventListener("click", exportJson);
+    $("btnExportCards").addEventListener("click", exportCardPNGs);
+    $("btnLevelUp").addEventListener("click", openLevelUp);
+    $("btnClearAutosave").addEventListener("click", ()=>{ clearAutosave(); });
+
+    // portrait controls
+    $("portraitZoom").addEventListener("input", ()=>{
+      setPortraitZoom(safeFloat($("portraitZoom").value, 1.0));
+    });
+    $("btnPortraitReset").addEventListener("click", ()=>{
+      data.portrait.zoom = 1.0;
+      data.portrait.offX = 0;
+      data.portrait.offY = 0;
+      refreshPortraitUI();
+      renderPortrait();
+      saveAutosave();
+    });
+    $("btnPortraitClear").addEventListener("click", ()=>{
+      data.portrait.dataUrl = null;
+      portraitImg = null;
+      data.portrait.zoom = 1.0;
+      data.portrait.offX = 0;
+      data.portrait.offY = 0;
+      $("portraitFile").value = "";
+      refreshPortraitUI();
+      renderPortrait();
+      saveAutosave();
+    });
+    $("btnPortraitLock").addEventListener("click", ()=>{
+      data.portrait.locked = !data.portrait.locked;
+      updatePortraitLockUI();
+      saveAutosave();
+    });
+    $("portraitFile").addEventListener("change", onPortraitFile);
+
+    // skills
+    $("btnAddSkill").addEventListener("click", ()=>openSkillEditor(null));
+
+    // rollers
+    $("btnRoll").addEventListener("click", doRoll);
+    $("btnCopyRoll").addEventListener("click", ()=>{
+      navigator.clipboard?.writeText($("rollOut").value || "").then(()=>toast("Copied")).catch(()=>toast("Copy failed"));
+    });
+    $("btnDamage").addEventListener("click", doDamage);
+    $("btnCopyQR").addEventListener("click", ()=>{
+      navigator.clipboard?.writeText($("qrOut").value || "").then(()=>toast("Copied")).catch(()=>toast("Copy failed"));
+    });
+  }
+
+  function normaliseDerived(){
+    data.level = clamp(safeInt(data.level,1), 1, 12);
+    data.body  = clamp(safeInt(data.body,1), 1, 2);
+    data.mind  = clamp(safeInt(data.mind,1), 1, 2);
+
+    data.grit_max  = Math.max(0, safeInt(data.grit_max,0));
+    data.focus_max = Math.max(0, safeInt(data.focus_max,0));
+    data.dp_max    = Math.max(0, safeInt(data.dp_max,0));
+
+    data.grit_cur  = clamp(safeInt(data.grit_cur,0), 0, data.grit_max);
+    data.focus_cur = clamp(safeInt(data.focus_cur,0), 0, data.focus_max);
+    data.dp_cur    = clamp(safeInt(data.dp_cur,0), 0, data.dp_max);
+
+    if(!Array.isArray(data.skills)) data.skills = [];
+    if(typeof data.features_text !== "string") data.features_text = "";
+    if(typeof data.details !== "string") data.details = "";
+    if(typeof data.wealth_other !== "string") data.wealth_other = "";
+    data.wealth_coins = Math.max(0, safeInt(data.wealth_coins,0));
+
+    if(!data.portrait || typeof data.portrait !== "object"){
+      data.portrait = {dataUrl:null, zoom:1, offX:0, offY:0, locked:false};
+    }
+    data.portrait.zoom = clamp(safeFloat(data.portrait.zoom,1.0), 0.5, 3.0);
+    data.portrait.offX = safeFloat(data.portrait.offX, 0);
+    data.portrait.offY = safeFloat(data.portrait.offY, 0);
+    data.portrait.locked = !!data.portrait.locked;
+  }
+
+  function syncInputsFromData(){
+    $("name").value = data.name || "";
+    $("level").value = String(data.level ?? 1);
+    $("species").value = data.species || "";
+    $("background").value = data.background || "";
+    $("body").value = String(data.body ?? 1);
+    $("mind").value = String(data.mind ?? 1);
+
+    $("gritMax").value = String(data.grit_max ?? 0);
+    $("gritCur").value = String(data.grit_cur ?? 0);
+    $("focusMax").value = String(data.focus_max ?? 0);
+    $("focusCur").value = String(data.focus_cur ?? 0);
+    $("dpMax").value = String(data.dp_max ?? 0);
+    $("dpCur").value = String(data.dp_cur ?? 0);
+
+    $("features").value = data.features_text || "";
+    $("details").value = data.details || "";
+    $("detailsBig").value = data.details || "";
+    $("wealthCoins").value = String(data.wealth_coins ?? 0);
+    $("wealthOther").value = data.wealth_other || "";
+    refreshPortraitUI();
+  }
+
+  function syncCoreNumbers(){
+    $("gritCur").value = String(data.grit_cur);
+    $("focusCur").value = String(data.focus_cur);
+    $("dpCur").value = String(data.dp_cur);
+  }
+
+  function refreshVitals(){
+    $("vName").textContent = (data.name || "—");
+    $("vLevel").textContent = String(data.level ?? 1);
+    $("vStats").textContent = `${data.body ?? 1} / ${data.mind ?? 1}`;
+    $("vGrit").textContent = `${data.grit_cur ?? 0} / ${data.grit_max ?? 0}`;
+    $("vFocus").textContent = `${data.focus_cur ?? 0} / ${data.focus_max ?? 0}`;
+    $("vDice").textContent = `${data.dp_cur ?? 0} / ${data.dp_max ?? 0}`;
+  }
+
+  function refreshSkills(){
+    const list = $("skillsList");
+    list.innerHTML = "";
+    const rollSkill = $("rollSkill");
+    rollSkill.innerHTML = "";
+
+    const skills = Array.isArray(data.skills) ? data.skills : [];
+    if(skills.length === 0){
+      const empty = document.createElement("div");
+      empty.className = "pill";
+      empty.textContent = "No skills yet";
+      list.appendChild(empty);
+
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "—";
+      rollSkill.appendChild(opt);
+      return;
+    }
+
+    for(let i=0;i<skills.length;i++){
+      const s = skills[i];
+      const tag = s.tag || "B";
+      const dice = clamp(safeInt(s.dice,1), 1, 6);
+      const def = !!s.defensive;
+
+      const item = document.createElement("div");
+      item.className = "item";
+
+      const left = document.createElement("div");
+      left.className = "left";
+      left.style.flex = "1";
+      left.style.minWidth = "0";
+
+      const nm = document.createElement("div");
+      nm.className = "name";
+      nm.textContent = `(${tag}) ${s.name || "Unnamed"} — ${dice}d6${def ? " [DEF]" : ""}`;
+      left.appendChild(nm);
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = "Edit to change tag/dice/defensive.";
+      left.appendChild(meta);
+
+      const btns = document.createElement("div");
+      btns.className = "row";
+
+      const bEdit = document.createElement("button");
+      bEdit.textContent = "Edit";
+      bEdit.addEventListener("click", ()=>openSkillEditor({index:i, ...s}));
+
+      const bDel = document.createElement("button");
+      bDel.className = "danger";
+      bDel.textContent = "Remove";
+      bDel.addEventListener("click", ()=>{
+        data.skills.splice(i,1);
+        refreshAll(); saveAutosave();
+      });
+
+      btns.appendChild(bEdit);
+      btns.appendChild(bDel);
+
+      item.appendChild(left);
+      item.appendChild(btns);
+      list.appendChild(item);
+
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = `(${tag}) ${s.name || "Unnamed"}`;
+      rollSkill.appendChild(opt);
+    }
+  }
+
+  function refreshQuickRef(){
+    const skills = (data.skills||[]).map(s => `• (${s.tag||"B"}) ${s.name||"Unnamed"}`).join("\n");
+    const feats = (data.features_text||"")
+      .split(/\r?\n/)
+      .map(l=>l.trim())
+      .filter(Boolean)
+      .map(l=>l.startsWith("•") ? l : `• ${l}`)
+      .join("\n");
+
+    const out = [
+      "Skills:",
+      skills || "• —",
+      "",
+      "Features:",
+      feats || "• —"
+    ].join("\n");
+
+    $("qrOut").value = out;
+  }
+
+  function refreshAll(){
+    refreshVitals();
+    refreshSkills();
+    refreshQuickRef();
+    if($("detailsBig").value !== data.details) $("detailsBig").value = data.details || "";
+  }
+
+  // --- Tabs
+  function setTab(name){
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+    $("tab-character").style.display = (name === "character") ? "" : "none";
+    $("tab-details").style.display = (name === "details") ? "" : "none";
+    $("tab-about").style.display = (name === "about") ? "" : "none";
+  }
+  document.querySelectorAll(".tab").forEach(t => {
+    t.addEventListener("click", ()=>setTab(t.dataset.tab));
+  });
+
+  // --- Modal framework
+  const modalBackdrop = $("modalBackdrop");
+  const modalTitle = $("modalTitle");
+  const modalBody = $("modalBody");
+  const modalFooter = $("modalFooter");
+
+  function openModal({title, bodyNode, footerButtons=[]}){
+    modalTitle.textContent = title || "Menu";
+    modalBody.innerHTML = "";
+    if(bodyNode) modalBody.appendChild(bodyNode);
+    modalFooter.innerHTML = "";
+    footerButtons.forEach(b => modalFooter.appendChild(b));
+    modalBackdrop.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  }
+  function closeModal(){
+    modalBackdrop.style.display = "none";
+    document.body.style.overflow = "";
+    modalBody.innerHTML = "";
+    modalFooter.innerHTML = "";
+  }
+  $("btnModalClose").addEventListener("click", closeModal);
+  modalBackdrop.addEventListener("click", (e)=>{ if(e.target === modalBackdrop) closeModal(); });
+
+  function openMobileMenu(){
+    const wrap = document.createElement("div");
+    wrap.className = "fields";
+
+    const mkBtn = (text, cls, onClick) => {
+      const b = document.createElement("button");
+      b.textContent = text;
+      if(cls) b.className = cls;
+      b.addEventListener("click", ()=>{ closeModal(); onClick(); });
+      return b;
+    };
+
+    const p = document.createElement("div");
+    p.className = "span12";
+    p.style.color = "var(--muted)";
+    p.style.lineHeight = "1.5";
+    p.innerHTML = `
+      <div class="pill" style="display:inline-block; margin-bottom:10px;">Menu</div>
+      <div>Open/Export/Level up/Card export live here on mobile.</div>
+    `;
+    wrap.appendChild(p);
+
+    const row = document.createElement("div");
+    row.className = "row";
+    row.style.marginTop = "10px";
+    row.appendChild(mkBtn("Open…", "", ()=>$("jsonFile").click()));
+    row.appendChild(mkBtn("Export JSON", "primary", exportJson));
+    row.appendChild(mkBtn("Export Card PNGs", "", exportCardPNGs));
+    row.appendChild(mkBtn("Level Up", "", openLevelUp));
+    row.appendChild(mkBtn("Clear Autosave", "danger", clearAutosave));
+    wrap.appendChild(row);
+
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "Close";
+    closeBtn.addEventListener("click", closeModal);
+
+    openModal({ title:"Menu", bodyNode: wrap, footerButtons:[closeBtn] });
+  }
+
+  // --- Reset helpers (ensures new characters wipe EVERYTHING including portrait)
+  function resetCharacterToBlank(){
+    Object.assign(data, {
+      name:"",
+      level:1,
+      species:"",
+      background:"",
+      body:1,
+      mind:1,
+      grit_max:4, grit_cur:4,
+      focus_max:4, focus_cur:4,
+      dp_max:0, dp_cur:0,
+      skills:[],
+      features_text:"",
+      details:"",
+      wealth_coins:0,
+      wealth_other:"",
+      portrait:{ dataUrl:null, zoom:1.0, offX:0, offY:0, locked:data.portrait?.locked ?? false }
+    });
+    portraitImg = null;
+    $("portraitFile").value = "";
+    $("portraitZoom").value = "1.00";
+  }
+
+  function newBlank(){
+    if(!confirm("Start a new blank character? This overwrites the current one.")) return;
+    resetCharacterToBlank();
+    normaliseDerived();
+    syncInputsFromData();
+    refreshAll();
+    renderPortrait();
+    saveAutosave();
+    toast("New (Blank)");
+  }
+
+  // --- Guided creation (core-rulebook accurate)
+  const PRESET_SPECIES = ["Human","Dwarf","Elf","Seafolk","Custom"];
+  const PRESET_BACKGROUNDS = ["Custom","Warrior","Mage","Priest","Thief","Ranger"];
+
+  const BG_SKILLS = {
+    Warrior:["Melee Weapons","Ranged Weapons","Manual Labour","Metalcraft"],
+    Mage:["Magic: Elements","Magic: Wards","Academics","Parlour Magic"],
+    Priest:["Magic: Healing","Melee Weapons","Faith","Insight"],
+    Thief:["Melee Weapons","Roguery","Stealth","Social Manipulation"], // first slot can be swapped to Ranged
+    Ranger:["Ranged Weapons","Scout","Vigilance","Natural World"]
+  };
+
+  const TRAIT_EXAMPLES = ["Lowlight Vision","Underwater Adaptions","Heat Resistance"];
+
+  function openGuidedCreation(){
+    const state = {
+      step: 0,
+      name: "",
+      species: "Human",
+      background: "Warrior",
+
+      baseGrit: 4, // these MUST sum to 8
+      baseFocus: 4,
+
+      thiefWeapon: "Melee Weapons",
+
+      customBonusGrit: 0,
+      customBonusFocus: 0,
+      customTraitsText: "",
+
+      skills: []
+    };
+
+    const steps = [
+      { title:"Name", render: renderStepName },
+      { title:"Species", render: renderStepSpecies },
+      { title:"Background", render: renderStepBackground },
+      { title:"Grit / Focus", render: renderStepPools },
+      { title:"Starting Skills", render: renderStepSkills }
+    ];
+
+    function speciesMeta(){
+      // returns {bg, bf, extraSkill, traits:[]}
+      if(state.species === "Human") return { bg:1, bf:1, extraSkill:1, traits:[] };
+      if(state.species === "Dwarf") return { bg:2, bf:0, extraSkill:0, traits:["Lowlight Vision"] };
+      if(state.species === "Elf") return { bg:0, bf:3, extraSkill:0, traits:[] };
+      if(state.species === "Seafolk") return { bg:1, bf:1, extraSkill:0, traits:["Underwater Adaptions"] };
+      if(state.species === "Custom"){
+        const bg = clamp(safeInt(state.customBonusGrit,0), 0, 3);
+        const bf = clamp(safeInt(state.customBonusFocus,0), 0, 3);
+        const used = bg + bf;
+        const traitPoints = clamp(3 - used, 0, 3);
+        const typed = (state.customTraitsText||"")
+          .split(/[\n,]+/)
+          .map(s=>s.trim())
+          .filter(Boolean)
+          .slice(0, traitPoints);
+        return { bg, bf, extraSkill:0, traits: typed };
+      }
+      return { bg:0, bf:0, extraSkill:0, traits:[] };
+    }
+
+    function seedSkillsFromBackground(){
+      if(state.background === "Custom"){
+        state.skills = [];
+        return;
+      }
+      const base = (BG_SKILLS[state.background] || []).slice(0, 4);
+
+      // thief weapon choice for slot 0
+      if(state.background === "Thief"){
+        base[0] = state.thiefWeapon;
+      }
+      state.skills = base.map(nm => ({ name:nm, tag:"B", dice:1, defensive:false }));
+    }
+
+    seedSkillsFromBackground();
+
+    function rerender(){
+      const wrap = document.createElement("div");
+      wrap.className = "fields";
+
+      const head = document.createElement("div");
+      head.className = "span12";
+      head.style.color = "var(--muted)";
+      head.style.marginBottom = "6px";
+      head.innerHTML = `<div class="pill">Step ${state.step+1} / ${steps.length}</div> <span style="margin-left:8px;">${steps[state.step].title}</span>`;
+      wrap.appendChild(head);
+
+      const body = steps[state.step].render();
+      wrap.appendChild(body);
+
+      const btnBack = document.createElement("button");
+      btnBack.textContent = "Back";
+      btnBack.disabled = state.step === 0;
+      btnBack.addEventListener("click", ()=>{ state.step = Math.max(0, state.step-1); rerender(); });
+
+      const btnNext = document.createElement("button");
+      btnNext.className = "primary";
+      btnNext.textContent = (state.step === steps.length-1) ? "Apply" : "Next";
+      btnNext.addEventListener("click", ()=>{
+        if(state.step === 0 && !state.name.trim()){ toast("Name required"); return; }
+        if(state.step < steps.length-1){
+          state.step++;
+          rerender();
+        }else{
+          // APPLY: full wipe first (including portrait), then apply wizard output
+          resetCharacterToBlank();
+
+          const sm = speciesMeta();
+
+          // base pools (8 split) + species bonus
+          const gritMax = clamp(safeInt(state.baseGrit,4), 0, 8) + sm.bg;
+          const focusMax = clamp(safeInt(state.baseFocus,4), 0, 8) + sm.bf;
+
+          data.name = state.name.trim();
+          data.species = state.species;
+          data.background = state.background;
+
+          data.grit_max = gritMax;
+          data.grit_cur = gritMax;
+          data.focus_max = focusMax;
+          data.focus_cur = focusMax;
+
+          // skills: backgrounds provide 4; human gets to choose a 5th in step 5
+          data.skills = state.skills.slice(0);
+
+          // traits -> features
+          if(sm.traits.length){
+            const lines = sm.traits.map(t => `• Trait: ${t}`);
+            data.features_text = lines.join("\n");
+          }
+
+          normaliseDerived();
+          syncInputsFromData();
+          refreshAll();
+          renderPortrait();
+          saveAutosave();
+          closeModal();
+          toast("New (Guided)");
+        }
+      });
+
+      const btnCancel = document.createElement("button");
+      btnCancel.className = "danger";
+      btnCancel.textContent = "Cancel";
+      btnCancel.addEventListener("click", closeModal);
+
+      openModal({
+        title: "New (Guided Creation)",
+        bodyNode: wrap,
+        footerButtons: [btnCancel, btnBack, btnNext]
+      });
+    }
+
+    function renderStepName(){
+      const box = document.createElement("div");
+      box.className = "field span12";
+      box.innerHTML = `<label>Name</label><input id="wizName" type="text" enterkeyhint="done" autocomplete="off" />`;
+      const el = box.querySelector("#wizName");
+      el.value = state.name;
+      el.addEventListener("input", ()=>{ state.name = el.value; });
+      setTimeout(()=>el.focus(), 60);
+      return box;
+    }
+
+    function renderStepSpecies(){
+      const box = document.createElement("div");
+      box.className = "field span12";
+
+      const opts = PRESET_SPECIES.map(s=>`<option value="${s}">${s}</option>`).join("");
+      box.innerHTML = `
+        <label>Species</label>
+        <select id="wizSpecies">${opts}</select>
+
+        <div id="speciesInfo" style="margin-top:10px; color:var(--muted); line-height:1.5;"></div>
+
+        <div id="customBlock" style="margin-top:10px; display:none;">
+          <div class="pill">Custom: +3 split between Grit, Focus, and Traits</div>
+          <div style="height:10px;"></div>
+          <div class="fields">
+            <div class="field span6">
+              <label>+Grit (0–3)</label>
+              <input id="cGrit" type="number" min="0" max="3" step="1">
+            </div>
+            <div class="field span6">
+              <label>+Focus (0–3)</label>
+              <input id="cFocus" type="number" min="0" max="3" step="1">
+            </div>
+            <div class="field span12">
+              <label>Traits (up to remaining points)</label>
+              <textarea id="cTraits" class="mono" style="min-height:90px;" placeholder="Lowlight Vision&#10;Underwater Adaptions"></textarea>
+              <div class="pill" id="cRemain" style="margin-top:8px;">Traits points: 3</div>
+              <div class="pill" style="margin-top:8px;">Examples: ${TRAIT_EXAMPLES.join(", ")}</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const sel = box.querySelector("#wizSpecies");
+      const info = box.querySelector("#speciesInfo");
+      const customBlock = box.querySelector("#customBlock");
+      const cG = box.querySelector("#cGrit");
+      const cF = box.querySelector("#cFocus");
+      const cT = box.querySelector("#cTraits");
+      const cR = box.querySelector("#cRemain");
+
+      sel.value = state.species;
+
+      cG.value = String(state.customBonusGrit);
+      cF.value = String(state.customBonusFocus);
+      cT.value = String(state.customTraitsText || "");
+
+      function update(){
+        state.species = sel.value;
+
+        customBlock.style.display = (state.species === "Custom") ? "" : "none";
+
+        const sm = speciesMeta();
+        if(state.species === "Human") info.textContent = "Human: +1 Grit, +1 Focus, +1 bonus skill.";
+        else if(state.species === "Dwarf") info.textContent = "Dwarf: +2 Grit, Trait: Lowlight Vision.";
+        else if(state.species === "Elf") info.textContent = "Elf: +3 Focus.";
+        else if(state.species === "Seafolk") info.textContent = "Seafolk: +1 Grit, +1 Focus, Trait: Underwater Adaptions.";
+        else if(state.species === "Custom"){
+          const used = sm.bg + sm.bf;
+          const traitPts = clamp(3 - used, 0, 3);
+          info.textContent = `Custom: +${sm.bg} Grit, +${sm.bf} Focus, ${traitPts} trait point(s).`;
+          cR.textContent = `Traits points: ${traitPts}`;
+        } else info.textContent = "";
+      }
+
+      function enforceCustomSum(changed){
+        // Keep cG + cF <= 3
+        let bg = clamp(safeInt(cG.value,0), 0, 3);
+        let bf = clamp(safeInt(cF.value,0), 0, 3);
+        if(bg + bf > 3){
+          if(changed === "G"){
+            bf = Math.max(0, 3 - bg);
+            cF.value = String(bf);
+          }else{
+            bg = Math.max(0, 3 - bf);
+            cG.value = String(bg);
+          }
+        }
+        state.customBonusGrit = bg;
+        state.customBonusFocus = bf;
+        state.customTraitsText = cT.value || "";
+        update();
+      }
+
+      sel.addEventListener("change", ()=>{ update(); rerender(); });
+      cG.addEventListener("input", ()=>enforceCustomSum("G"));
+      cF.addEventListener("input", ()=>enforceCustomSum("F"));
+      cT.addEventListener("input", ()=>{ state.customTraitsText = cT.value || ""; update(); });
+
+      update();
+      return box;
+    }
+
+    function renderStepBackground(){
+      const box = document.createElement("div");
+      box.className = "field span12";
+
+      const opts = PRESET_BACKGROUNDS.map(s=>`<option value="${s}">${s}</option>`).join("");
+      box.innerHTML = `
+        <label>Background</label>
+        <select id="wizBg">${opts}</select>
+
+        <div id="bgInfo" style="margin-top:10px; color:var(--muted); line-height:1.5;"></div>
+
+        <div id="thiefChoice" style="margin-top:10px; display:none;">
+          <label>Thief weapon skill</label>
+          <select id="thiefWeapon">
+            <option value="Melee Weapons">Melee Weapons</option>
+            <option value="Ranged Weapons">Ranged Weapons</option>
+          </select>
+        </div>
+      `;
+
+      const sel = box.querySelector("#wizBg");
+      const info = box.querySelector("#bgInfo");
+      const thiefWrap = box.querySelector("#thiefChoice");
+      const thiefSel = box.querySelector("#thiefWeapon");
+
+      sel.value = state.background;
+      thiefSel.value = state.thiefWeapon;
+
+      function update(){
+        state.background = sel.value;
+
+        thiefWrap.style.display = (state.background === "Thief") ? "" : "none";
+
+        if(state.background === "Custom") info.textContent = "Custom: choose 4 starting skills in the next step.";
+        else{
+          const list = BG_SKILLS[state.background] || [];
+          if(state.background === "Thief"){
+            info.textContent = `Thief: ${state.thiefWeapon}, Roguery, Stealth, Social Manipulation.`;
+          }else{
+            info.textContent = `${state.background}: ${list.join(", ")}.`;
+          }
+        }
+
+        seedSkillsFromBackground();
+      }
+
+      sel.addEventListener("change", ()=>{ update(); });
+      thiefSel.addEventListener("change", ()=>{ state.thiefWeapon = thiefSel.value; update(); });
+
+      update();
+      return box;
+    }
+
+    function renderStepPools(){
+      const box = document.createElement("div");
+      box.className = "field span12";
+      box.innerHTML = `
+        <div class="pill">Spend 8 points between Grit and Focus (species bonuses apply on top)</div>
+        <div style="height:10px"></div>
+        <div class="fields">
+          <div class="field span6">
+            <label>Base Grit</label>
+            <input id="wizG" type="number" min="0" max="8" step="1">
+          </div>
+          <div class="field span6">
+            <label>Base Focus</label>
+            <input id="wizF" type="number" min="0" max="8" step="1">
+          </div>
+          <div class="field span12">
+            <div class="pill" id="wizSum">Base Total: 8 / 8</div>
+            <div class="pill" id="wizFinal" style="margin-left:8px;">Final: —</div>
+          </div>
+        </div>
+      `;
+      const g = box.querySelector("#wizG");
+      const f = box.querySelector("#wizF");
+      const sum = box.querySelector("#wizSum");
+      const fin = box.querySelector("#wizFinal");
+      g.value = state.baseGrit;
+      f.value = state.baseFocus;
+
+      function sync(){
+        let gg = clamp(safeInt(g.value,4), 0, 8);
+        let ff = clamp(safeInt(f.value,4), 0, 8);
+        const total = gg + ff;
+        if(total !== 8){
+          if(document.activeElement === g){
+            ff = clamp(8 - gg, 0, 8);
+            f.value = String(ff);
+          }else{
+            gg = clamp(8 - ff, 0, 8);
+            g.value = String(gg);
+          }
+        }
+        state.baseGrit = gg;
+        state.baseFocus = ff;
+        sum.textContent = `Base Total: ${state.baseGrit + state.baseFocus} / 8`;
+
+        const sm = speciesMeta();
+        fin.textContent = `Final: Grit ${state.baseGrit + sm.bg}, Focus ${state.baseFocus + sm.bf}`;
+      }
+      g.addEventListener("input", sync);
+      f.addEventListener("input", sync);
+      sync();
+      return box;
+    }
+
+    function renderStepSkills(){
+      const box = document.createElement("div");
+      box.className = "field span12";
+
+      const sm = speciesMeta();
+      const required = 4 + (sm.extraSkill || 0);
+
+      const header = document.createElement("div");
+      header.style.display = "flex";
+      header.style.alignItems = "center";
+      header.style.justifyContent = "space-between";
+      header.style.gap = "10px";
+
+      const pill = document.createElement("div");
+      pill.className = "pill";
+      pill.textContent = `Choose ${required} starting skills`;
+      header.appendChild(pill);
+
+      const addBtn = document.createElement("button");
+      addBtn.className = "primary";
+      addBtn.textContent = "Add Skill";
+      addBtn.addEventListener("click", ()=>{
+        if(state.skills.length >= required){
+          toast(`Max ${required} skill(s) in guided creation`);
+          return;
+        }
+        openSkillEditor(null, (created)=>{
+          state.skills.push(created);
+        }, rerender);
+      });
+      header.appendChild(addBtn);
+
+      box.appendChild(header);
+
+      // For Human: add a quick "bonus skill" helper if not already present
+      const humanHelp = document.createElement("div");
+      humanHelp.style.marginTop = "10px";
+      humanHelp.style.color = "var(--muted)";
+      humanHelp.style.lineHeight = "1.5";
+      humanHelp.style.display = (state.species === "Human") ? "" : "none";
+      humanHelp.textContent = "Human: you get one bonus skill (total 5).";
+      box.appendChild(humanHelp);
+
+      // Background Custom: seed empty, force 4 (or 5 for human)
+      if(state.background === "Custom" && state.skills.length === 0){
+        // keep empty; user chooses
+      }else{
+        // ensure correct seed count if something changed
+        // (don’t override if user has already edited skills)
+        if(state.skills.length === 0){
+          seedSkillsFromBackground();
+        }
+      }
+
+      const list = document.createElement("div");
+      list.className = "list";
+      list.style.marginTop = "10px";
+      box.appendChild(list);
+
+      function draw(){
+        // Hard clamp to required (prevents accidental extra)
+        if(state.skills.length > required) state.skills = state.skills.slice(0, required);
+
+        list.innerHTML = "";
+
+        const countPill = document.createElement("div");
+        countPill.className = "pill";
+        countPill.textContent = `Selected: ${state.skills.length} / ${required}`;
+        list.appendChild(countPill);
+
+        if(state.skills.length === 0){
+          const p = document.createElement("div");
+          p.className = "pill";
+          p.textContent = "No skills yet";
+          list.appendChild(p);
+        }
+
+        state.skills.forEach((s, idx)=>{
+          const row = document.createElement("div");
+          row.className = "item";
+          const left = document.createElement("div");
+          left.className = "left";
+          left.style.flex="1";
+          left.style.minWidth="0";
+          const nm = document.createElement("div");
+          nm.className = "name";
+          nm.textContent = `(${s.tag||"B"}) ${s.name||"Unnamed"} — ${clamp(safeInt(s.dice,1),1,6)}d6${s.defensive?" [DEF]":""}`;
+          left.appendChild(nm);
+
+          const btns = document.createElement("div");
+          btns.className = "row";
+          const b = document.createElement("button");
+          b.textContent = "Edit";
+          b.addEventListener("click", ()=>{
+            openSkillEditor({ index: idx, ...s }, (updated)=>{
+              state.skills[idx] = updated;
+            }, rerender);
+          });
+          const d = document.createElement("button");
+          d.className="danger";
+          d.textContent="Remove";
+          d.addEventListener("click", ()=>{ state.skills.splice(idx,1); draw(); });
+          btns.appendChild(b); btns.appendChild(d);
+
+          row.appendChild(left); row.appendChild(btns);
+          list.appendChild(row);
+        });
+
+        // If background is not custom and user is underfilled, allow quick "reset to background"
+        if(state.background !== "Custom"){
+          const resetBtn = document.createElement("button");
+          resetBtn.textContent = "Reset to background skills";
+          resetBtn.addEventListener("click", ()=>{
+            seedSkillsFromBackground();
+            // If human, leave room for bonus skill
+            if(state.species === "Human"){
+              state.skills = state.skills.slice(0, 4);
+            }
+            draw();
+          });
+          list.appendChild(resetBtn);
+        }
+      }
+
+      // Ensure thief selection is reflected if user hasn't edited
+      if(state.background === "Thief"){
+        const expected0 = state.thiefWeapon;
+        if(state.skills.length > 0 && state.skills[0] && state.skills[0].name !== expected0){
+          // Only auto-correct if it still looks like seeded list
+          const seeded = BG_SKILLS.Thief;
+          const looksSeeded = state.skills.length === 4 && state.skills.slice(1).every((x,i)=>x.name === seeded[i+1]);
+          if(looksSeeded) state.skills[0].name = expected0;
+        }
+      }
+
+      // Enforce human bonus slot (5th skill) vs others (4)
+      if(state.species !== "Human" && state.skills.length > 4){
+        state.skills = state.skills.slice(0, 4);
+      }
+      if(state.species === "Human" && state.background !== "Custom" && state.skills.length === 4){
+        // fine; user can add the 5th
+      }
+
+      draw();
+      return box;
+    }
+
+    rerender();
+  }
+
+  // --- Skill editor (reusable) + wizard override
+  function openSkillEditor(preset, onOkOverride, onCancelOverride){
+    const isWizard = typeof onOkOverride === "function";
+    const wizardReturn = (typeof onCancelOverride === "function") ? onCancelOverride : null;
+
+    const s0 = preset ? { ...preset } : { name:"", tag:"B", dice:1, defensive:false };
+    const wrap = document.createElement("div");
+    wrap.className = "fields";
+
+    const fName = document.createElement("div");
+    fName.className = "field span12";
+    fName.innerHTML = `<label>Name</label><input id="skName" type="text" enterkeyhint="done">`;
+    wrap.appendChild(fName);
+
+    const fTag = document.createElement("div");
+    fTag.className = "field span4";
+    fTag.innerHTML = `
+      <label>Tag</label>
+      <select id="skTag">
+        <option value="B">(B) Broad</option>
+        <option value="N">(N) Narrow</option>
+        <option value="S">(S) Signature</option>
+      </select>
+    `;
+    wrap.appendChild(fTag);
+
+    const fDice = document.createElement("div");
+    fDice.className = "field span4";
+    fDice.innerHTML = `<label>Dice</label><input id="skDice" type="number" min="1" max="6" step="1">`;
+    wrap.appendChild(fDice);
+
+    const fDef = document.createElement("div");
+    fDef.className = "field span4";
+    fDef.innerHTML = `<label style="display:flex; gap:8px; align-items:center;">
+      <input id="skDef" type="checkbox" style="width:auto;"> Defensive
+    </label>`;
+    wrap.appendChild(fDef);
+
+    const nameEl = wrap.querySelector("#skName");
+    const tagEl  = wrap.querySelector("#skTag");
+    const diceEl = wrap.querySelector("#skDice");
+    const defEl  = wrap.querySelector("#skDef");
+
+    nameEl.value = s0.name || "";
+    tagEl.value  = s0.tag || "B";
+    diceEl.value = String(clamp(safeInt(s0.dice,1),1,6));
+    defEl.checked = !!s0.defensive;
+
+    const btnCancel = document.createElement("button");
+    btnCancel.className = "danger";
+    btnCancel.textContent = "Cancel";
+    btnCancel.addEventListener("click", ()=>{
+      if(isWizard && wizardReturn){
+        wizardReturn();
+        return;
+      }
+      closeModal();
+    });
+
+    const btnOK = document.createElement("button");
+    btnOK.className = "primary";
+    btnOK.textContent = "OK";
+    btnOK.addEventListener("click", ()=>{
+      const name = (nameEl.value||"").trim();
+      if(!name){ toast("Skill name required"); return; }
+      const skill = {
+        name,
+        tag: tagEl.value || "B",
+        dice: clamp(safeInt(diceEl.value,1), 1, 6),
+        defensive: !!defEl.checked
+      };
+
+      if(isWizard){
+        onOkOverride(skill);
+        if(wizardReturn) wizardReturn();
+        return;
+      }
+
+      if(preset && Number.isFinite(preset.index)){
+        data.skills[preset.index] = skill;
+      }else{
+        data.skills.push(skill);
+      }
+      normaliseDerived();
+      refreshAll();
+      saveAutosave();
+      closeModal();
+    });
+
+    openModal({
+      title: preset ? "Edit Skill" : "Add Skill",
+      bodyNode: wrap,
+      footerButtons: [btnCancel, btnOK]
+    });
+
+    setTimeout(()=>nameEl.focus(), 60);
+  }
+
+  // --- Roll / Damage tools
+  function rollD6(n){
+    const out = [];
+    for(let i=0;i<n;i++) out.push(1 + Math.floor(Math.random()*6));
+    return out;
+  }
+  function countSuccesses(rolls, threshold){
+    return rolls.reduce((acc,r)=>acc + (r >= threshold ? 1 : 0), 0);
+  }
+  function doRoll(){
+    const attr = $("rollAttr").value;
+    const idx = safeInt($("rollSkill").value, -1);
+    const bonus = Math.max(0, safeInt($("rollBonus").value, 0));
+
+    const baseDice = (attr === "Body") ? (data.body||1) : (data.mind||1);
+    const skillDice = (idx >= 0 && data.skills[idx]) ? clamp(safeInt(data.skills[idx].dice,1),1,6) : 0;
+    const totalDice = baseDice + skillDice + bonus;
+
+    const rolls = rollD6(totalDice);
+    const succ = countSuccesses(rolls, SUCCESS_THRESHOLD);
+
+    const skillName = (idx>=0 && data.skills[idx]) ? data.skills[idx].name : "—";
+    const msg = [
+      `Attribute: ${attr} (${baseDice}d6)`,
+      `Skill: ${skillName} (${skillDice}d6)`,
+      `Bonus: ${bonus}d6`,
+      `Threshold: ${SUCCESS_THRESHOLD}+`,
+      `Rolls: ${rolls.join(", ")}`,
+      `Successes: ${succ}`
+    ].join("\n");
+
+    $("rollOut").value = msg;
+    $("checkPill").textContent = `${succ} succ`;
+    saveAutosave();
+  }
+
+  function doDamage(){
+    const qty = Math.max(0, safeInt($("dmgQty").value, 0));
+    const mode = $("dmgMode").value;
+    const target = $("dmgTarget").value;
+    const dr = Math.max(0, safeInt($("dmgDR").value, 0));
+
+    let raw = 0;
+    let rolls = [];
+    if(mode === "flat"){
+      raw = qty;
+    }else{
+      rolls = rollD6(qty);
+      raw = rolls.reduce((a,b)=>a+b,0);
+    }
+    const dmg = Math.max(0, raw - dr);
+
+    if(target === "Grit"){
+      data.grit_cur = clamp(data.grit_cur - dmg, 0, data.grit_max);
+      $("gritCur").value = String(data.grit_cur);
+    }else{
+      data.focus_cur = clamp(data.focus_cur - dmg, 0, data.focus_max);
+      $("focusCur").value = String(data.focus_cur);
+    }
+    refreshVitals();
+
+    const msg = [
+      `Target: ${target}`,
+      `Mode: ${mode === "flat" ? "Flat" : `d6 × ${qty}`}`,
+      mode === "flat" ? `Raw: ${raw}` : `Rolls: ${rolls.join(", ")}\nRaw: ${raw}`,
+      `DR: ${dr}`,
+      `Damage taken: ${dmg}`
+    ].join("\n");
+
+    $("dmgOut").value = msg;
+    $("dmgPill").textContent = `${target} -${dmg}`;
+    saveAutosave();
+  }
+
+  // --- JSON export/import
+  function safeFileName(name){
+    const base = (name||"Character").trim() || "Character";
+    return base
+      .replace(/[^\w\- ]+/g, "")
+      .replace(/\s+/g, "_")
+      .slice(0, 48);
+  }
+  function downloadText(filename, text, mime){
+    const blob = new Blob([text], {type: mime || "text/plain"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 500);
+  }
+  function exportJson(){
+    normaliseDerived();
+    const filename = safeFileName(data.name) + ".json";
+    downloadText(filename, JSON.stringify(data, null, 2), "application/json");
+    toast("Exported JSON");
+  }
+  function onOpenJson(){
+    const f = $("jsonFile").files?.[0];
+    $("jsonFile").value = "";
+    if(!f) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const obj = JSON.parse(String(reader.result||""));
+        if(!obj || typeof obj !== "object") throw new Error("Bad JSON");
+        Object.assign(data, obj);
+        if(obj.portrait) Object.assign(data.portrait, obj.portrait);
+        normaliseDerived();
+        syncInputsFromData();
+        refreshAll();
+        loadPortraitFromDataUrl(data.portrait.dataUrl);
+        renderPortrait();
+        saveAutosave();
+        toast("Opened JSON");
+      }catch(e){
+        toast("Invalid JSON");
+      }
+    };
+    reader.readAsText(f);
+  }
+
+  // --- Level up (simple + manual-friendly)
+  function openLevelUp(){
+    const wrap = document.createElement("div");
+    wrap.className = "fields";
+
+    const p = document.createElement("div");
+    p.className = "field span12";
+    p.style.color = "var(--muted)";
+    p.style.lineHeight = "1.5";
+    p.innerHTML = `
+      <div class="pill">Level Up</div>
+      <div style="margin-top:8px;">
+        This is intentionally light-touch: it bumps Level by 1 and lets you adjust max pools manually.
+      </div>
+    `;
+    wrap.appendChild(p);
+
+    const fLvl = document.createElement("div");
+    fLvl.className = "field span6";
+    fLvl.innerHTML = `<label>New Level</label><input id="luLevel" type="number" min="1" max="12" step="1">`;
+    wrap.appendChild(fLvl);
+
+    const fG = document.createElement("div");
+    fG.className = "field span3";
+    fG.innerHTML = `<label>Grit (max)</label><input id="luG" type="number" min="0" step="1">`;
+    wrap.appendChild(fG);
+
+    const fF = document.createElement("div");
+    fF.className = "field span3";
+    fF.innerHTML = `<label>Focus (max)</label><input id="luF" type="number" min="0" step="1">`;
+    wrap.appendChild(fF);
+
+    const lvl = wrap.querySelector("#luLevel");
+    const g = wrap.querySelector("#luG");
+    const f = wrap.querySelector("#luF");
+
+    lvl.value = String(clamp((data.level||1) + 1, 1, 12));
+    g.value = String(data.grit_max||0);
+    f.value = String(data.focus_max||0);
+
+    const btnCancel = document.createElement("button");
+    btnCancel.className="danger";
+    btnCancel.textContent="Cancel";
+    btnCancel.addEventListener("click", closeModal);
+
+    const btnOK = document.createElement("button");
+    btnOK.className="primary";
+    btnOK.textContent="Apply";
+    btnOK.addEventListener("click", ()=>{
+      data.level = clamp(safeInt(lvl.value, data.level||1), 1, 12);
+      data.grit_max = Math.max(0, safeInt(g.value, data.grit_max||0));
+      data.focus_max = Math.max(0, safeInt(f.value, data.focus_max||0));
+      data.grit_cur = clamp(data.grit_cur, 0, data.grit_max);
+      data.focus_cur = clamp(data.focus_cur, 0, data.focus_max);
+      syncInputsFromData();
+      refreshAll();
+      saveAutosave();
+      closeModal();
+      toast("Level updated");
+    });
+
+    openModal({ title:"Level Up", bodyNode:wrap, footerButtons:[btnCancel, btnOK] });
+  }
+
+  // --- Portrait rendering + interactions
+  const canvas = $("portraitCanvas");
+  const ctx = canvas.getContext("2d");
+  let portraitImg = null;
+
+  function updatePortraitLockUI(){
+    const b = $("btnPortraitLock");
+    if(data.portrait.locked){
+      b.textContent = "🔒";
+      b.classList.remove("is-unlocked");
+      b.title = "Locked (prevents drag + wheel/pinch zoom)";
+    }else{
+      b.textContent = "🔓";
+      b.classList.add("is-unlocked");
+      b.title = "Unlocked (drag/pinch/wheel enabled)";
+    }
+  }
+
+  function refreshPortraitUI(){
+    $("portraitZoom").value = String(data.portrait.zoom.toFixed(2));
+    $("zoomPill").textContent = `${data.portrait.zoom.toFixed(2)}×`;
+    updatePortraitLockUI();
+  }
+
+  function loadPortraitFromDataUrl(url){
+    if(!url){ portraitImg = null; renderPortrait(); return; }
+    const img = new Image();
+    img.onload = () => { portraitImg = img; renderPortrait(); };
+    img.src = url;
+  }
+
+  function onPortraitFile(){
+    const f = $("portraitFile").files?.[0];
+    $("portraitFile").value = "";
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      data.portrait.dataUrl = String(reader.result || "");
+      data.portrait.zoom = 1.0;
+      data.portrait.offX = 0;
+      data.portrait.offY = 0;
+      loadPortraitFromDataUrl(data.portrait.dataUrl);
+      refreshPortraitUI();
+      saveAutosave();
+    };
+    reader.readAsDataURL(f);
+  }
+
+  function setPortraitZoom(z){
+    data.portrait.zoom = clamp(z, 0.5, 3.0);
+    refreshPortraitUI();
+    renderPortrait();
+    saveAutosave();
+  }
+
+  function drawCoverImage(targetCtx, w, h, img, zoom, offX, offY){
+    targetCtx.clearRect(0,0,w,h);
+    targetCtx.fillStyle = "rgba(0,0,0,0.18)";
+    targetCtx.fillRect(0,0,w,h);
+
+    if(!img){
+      targetCtx.fillStyle = "rgba(255,255,255,0.18)";
+      targetCtx.font = `16px ${getComputedStyle(document.documentElement).getPropertyValue("--sans")}`;
+      targetCtx.textAlign = "center";
+      targetCtx.textBaseline = "middle";
+      targetCtx.fillText("No image", w/2, h/2);
+      return;
+    }
+
+    const iw = img.naturalWidth || img.width;
+    const ih = img.naturalHeight || img.height;
+    const scale = Math.max(w/iw, h/ih) * zoom;
+    const dw = iw * scale;
+    const dh = ih * scale;
+
+    const cx = (w - dw)/2 + offX;
+    const cy = (h - dh)/2 + offY;
+
+    targetCtx.imageSmoothingEnabled = true;
+    targetCtx.imageSmoothingQuality = "high";
+    targetCtx.drawImage(img, cx, cy, dw, dh);
+  }
+
+  function renderPortrait(){
+    normaliseDerived();
+    drawCoverImage(ctx, canvas.width, canvas.height, portraitImg, data.portrait.zoom, data.portrait.offX, data.portrait.offY);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.16)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1,1,canvas.width-2,canvas.height-2);
+  }
+
+  function blurActiveInput(){
+    const ae = document.activeElement;
+    if(ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.tagName === "SELECT")){
+      ae.blur();
+    }
+  }
+
+  // Pointer handling (pan + pinch) gated by lock
+  const pointers = new Map();
+  let pinchStartDist = 0;
+  let pinchStartZoom = 1;
+  let pinchStartOffX = 0;
+  let pinchStartOffY = 0;
+  let pinchMid = {x:0,y:0};
+
+  function canvasPoint(e){
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    return {x,y};
+  }
+
+  canvas.addEventListener("pointerdown", (e)=>{
+    blurActiveInput();
+    canvas.setPointerCapture(e.pointerId);
+
+    if(data.portrait.locked) return;
+
+    const pt = canvasPoint(e);
+    pointers.set(e.pointerId, pt);
+
+    if(pointers.size === 1){
+      dragStart = { x: pt.x, y: pt.y, ox: data.portrait.offX, oy: data.portrait.offY };
+    }else if(pointers.size === 2){
+      const pts = [...pointers.values()];
+      pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      pinchStartZoom = data.portrait.zoom;
+      pinchStartOffX = data.portrait.offX;
+      pinchStartOffY = data.portrait.offY;
+      pinchMid = { x:(pts[0].x+pts[1].x)/2, y:(pts[0].y+pts[1].y)/2 };
+    }
+  });
+
+  let dragStart = null;
+
+  canvas.addEventListener("pointermove", (e)=>{
+    if(data.portrait.locked) return;
+    if(!pointers.has(e.pointerId)) return;
+
+    const pt = canvasPoint(e);
+    pointers.set(e.pointerId, pt);
+
+    if(pointers.size === 1 && dragStart){
+      data.portrait.offX = dragStart.ox + (pt.x - dragStart.x);
+      data.portrait.offY = dragStart.oy + (pt.y - dragStart.y);
+      renderPortrait();
+      return;
+    }
+
+    if(pointers.size === 2){
+      const pts = [...pointers.values()];
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if(pinchStartDist <= 0) return;
+
+      const ratio = dist / pinchStartDist;
+      const newZoom = clamp(pinchStartZoom * ratio, 0.5, 3.0);
+
+      const scale = newZoom / pinchStartZoom;
+      data.portrait.zoom = newZoom;
+      data.portrait.offX = pinchStartOffX + (1 - scale) * (pinchMid.x - canvas.width/2);
+      data.portrait.offY = pinchStartOffY + (1 - scale) * (pinchMid.y - canvas.height/2);
+
+      refreshPortraitUI();
+      renderPortrait();
+    }
+  });
+
+  canvas.addEventListener("pointerup", (e)=>{
+    pointers.delete(e.pointerId);
+    if(pointers.size < 2){
+      pinchStartDist = 0;
+    }
+    if(pointers.size === 0){
+      dragStart = null;
+      saveAutosave();
+    }
+  });
+  canvas.addEventListener("pointercancel", (e)=>{
+    pointers.delete(e.pointerId);
+    dragStart = null;
+    pinchStartDist = 0;
+    saveAutosave();
+  });
+
+  // Wheel zoom (PC) gated by lock
+  canvas.addEventListener("wheel", (e)=>{
+    if(data.portrait.locked) return;
+    e.preventDefault();
+    const delta = (e.deltaY > 0) ? -0.06 : 0.06;
+    setPortraitZoom(data.portrait.zoom + delta);
+  }, {passive:false});
+
+  // --- Card export (Front/Back) 2.5:3.5 with transparent rounded corners
+  function roundRectPath(c, x,y,w,h,r){
+    const rr = Math.min(r, w/2, h/2);
+    c.beginPath();
+    c.moveTo(x+rr, y);
+    c.arcTo(x+w, y, x+w, y+h, rr);
+    c.arcTo(x+w, y+h, x, y+h, rr);
+    c.arcTo(x, y+h, x, y, rr);
+    c.arcTo(x, y, x+w, y, rr);
+    c.closePath();
+  }
+
+  function drawCardBase(c, W, H){
+    const refW = 1000, refH = 1400;
+    const sx = W / refW;
+    const sy = H / refH;
+    const s = Math.min(sx, sy);
+
+    c.clearRect(0,0,W,H);
+    c.save();
+
+    // Stronger corner masking (radius doubled)
+    const cornerR = 46 * s;
+
+    // FIX: corners only — make the mask slightly MORE rounded than the border path
+    // so no corner pixels can sit outside the visual border curve.
+    // If you still see corner bleed, increase 24*s slightly (e.g. 28*s). If it clips too far in, reduce it (e.g. 18*s).
+    const maskCornerR = cornerR + (1 * s);
+
+    roundRectPath(c, 0,0,W,H, maskCornerR);
+    c.clip();
+
+    if(portraitImg){
+      const imgSx = W / canvas.width;
+      const imgSy = H / canvas.height;
+      drawCoverImage(c, W, H, portraitImg, data.portrait.zoom, data.portrait.offX * imgSx, data.portrait.offY * imgSy);
+    }else{
+      c.fillStyle = "rgba(0,0,0,0.25)";
+      c.fillRect(0,0,W,H);
+    }
+
+    c.fillStyle = "rgba(0,0,0,0.18)";
+    c.fillRect(0,0,W,H);
+
+    c.restore();
+
+    // Border thickness doubled
+    c.save();
+    roundRectPath(c, 0,0,W,H, cornerR);
+    c.strokeStyle = "rgba(0,0,0,0.95)";
+    c.lineWidth = 60 * s;  // was 28
+    c.stroke();
+
+    roundRectPath(c, 0,0,W,H, cornerR);
+    c.strokeStyle = "rgba(255,255,255,0.20)";
+    c.lineWidth = Math.max(1, 4 * s);
+    c.stroke();
+    c.restore();
+  }
+
+  function drawCircleStat(c, cx, cy, r, text, fillColor){
+    c.save();
+    c.beginPath();
+    c.arc(cx, cy, r, 0, Math.PI*2);
+    c.fillStyle = fillColor || "rgb(255,255,255)";
+    c.fill();
+    c.lineWidth = 8;
+    c.strokeStyle = "rgba(255,255,255,0.70)";
+    c.stroke();
+
+    c.fillStyle = "rgba(255,255,255,0.95)";
+    c.strokeStyle = "rgba(0,0,0,0.75)";
+    c.lineWidth = 6;
+    c.font = `900 ${Math.round(r*0.95)}px ${FONT_SERIF}`;
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    const t = String(text ?? "");
+    c.strokeText(t, cx, cy+2);
+    c.fillText(t, cx, cy+2);
+    c.restore();
+  }
+
+  function drawTextBox(c, x,y,w,h, text, fontPx, align="center"){
+    c.save();
+    roundRectPath(c, x,y,w,h, 34);
+    c.fillStyle = "rgba(0,0,0,0.55)";
+    c.fill();
+    c.lineWidth = 6;
+    c.strokeStyle = "rgba(255,255,255,0.60)";
+    c.stroke();
+
+    c.beginPath();
+    roundRectPath(c, x,y,w,h, 34);
+    c.clip();
+
+    c.fillStyle = "rgba(255,255,255,0.95)";
+    c.strokeStyle = "rgba(0,0,0,0.75)";
+    c.lineWidth = 6;
+    c.font = `900 ${fontPx}px ${FONT_SERIF}`;
+    c.textAlign = align;
+    c.textBaseline = "middle";
+    const tx = x + (align==="center" ? w/2 : 18);
+    const ty = y + h/2;
+
+    c.strokeText(text, tx, ty);
+    c.fillText(text, tx, ty);
+    c.restore();
+  }
+
+  function wrapText(c, text, x, y, maxWidth, lineHeight, maxLines){
+    const words = text.split(/\s+/);
+    let line = "";
+    let lineCount = 0;
+    for(let i=0;i<words.length;i++){
+      const test = line ? (line + " " + words[i]) : words[i];
+      if(c.measureText(test).width > maxWidth && line){
+        c.fillText(line, x, y + lineCount*lineHeight);
+        line = words[i];
+        lineCount++;
+        if(maxLines && lineCount >= maxLines) return lineCount;
+      }else{
+        line = test;
+      }
+    }
+    if(line && (!maxLines || lineCount < maxLines)){
+      c.fillText(line, x, y + lineCount*lineHeight);
+      lineCount++;
+    }
+    return lineCount;
+  }
+
+  function drawBackTextBox(c, x,y,w,h, scale=1){
+    c.save();
+    roundRectPath(c, x,y,w,h, 34);
+    c.fillStyle = "rgba(0,0,0,0.55)";
+    c.fill();
+    c.lineWidth = 6;
+    c.strokeStyle = "rgba(255,255,255,0.60)";
+    c.stroke();
+
+    c.beginPath();
+    roundRectPath(c, x,y,w,h, 34);
+    c.clip();
+
+    const pad = 26 * scale;
+    let tx = x + pad;
+    let ty = y + pad;
+    const tw = w - pad*2;
+
+    const skills = (data.skills||[]).map(s => `• ${s.name || "Unnamed"}`).join("\n") || "• —";
+    const feats = (data.features_text||"")
+      .split(/\r?\n/).map(l=>l.trim()).filter(Boolean)
+      .map(l=>l.startsWith("•")? l : `• ${l}`).join("\n") || "• —";
+
+    const block = `Skills:\n${skills}\n\nFeatures:\n${feats}`;
+
+    c.fillStyle = "rgba(255,255,255,0.95)";
+    c.font = `800 ${Math.round(34 * scale)}px ${FONT_SERIF}`;
+    c.textAlign = "left";
+    c.textBaseline = "top";
+
+    const lines = block.split("\n");
+    const lh = 44 * scale;
+    let yCursor = ty;
+    for(const ln of lines){
+      if(!ln.trim()){
+        yCursor += lh * 0.6;
+        continue;
+      }
+      const used = wrapText(c, ln, tx, yCursor, tw, lh, Math.floor((y+h - yCursor - pad)/lh));
+      yCursor += lh * used;
+      if(yCursor > y + h - pad) break;
+    }
+
+    c.restore();
+  }
+
+  function downloadPng(cnv, filename){
+    const a = document.createElement("a");
+    a.href = cnv.toDataURL("image/png");
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  // Guardrail: force-lock portrait while exporting (prevents mid-gesture drift)
+  function exportCardPNGs(){
+    const name = safeFileName(data.name);
+
+    const prevLocked = data.portrait.locked;
+    data.portrait.locked = true;
+    updatePortraitLockUI();
+    pointers.clear();
+    dragStart = null;
+    pinchStartDist = 0;
+
+    const W = EXPORT_CARD_W, H = EXPORT_CARD_H; // requested export size
+    const refW = 1000, refH = 1400;
+    const sx = W / refW;
+    const sy = H / refH;
+    const s = Math.min(sx, sy);
+
+    const circleAlpha = 0.55; // match text box opacity
+
+    // FRONT
+    const front = document.createElement("canvas");
+    front.width = W; front.height = H;
+    const cf = front.getContext("2d");
+    drawCardBase(cf, W, H);
+
+    // Circles: red left, blue right (alpha matches text boxes)
+    const cx = 140 * sx;
+    const cy = 140 * sy;
+    const r  = 90  * s;
+    drawCircleStat(cf, cx, cy, r, data.grit_max ?? 0, `rgba(255,0,0,${circleAlpha})`);
+    drawCircleStat(cf, W - cx, cy, r, data.focus_max ?? 0, `rgba(0,0,255,${circleAlpha})`);
+
+    // Name box (font +30%)
+    const nameX = 80 * sx;
+    const nameY = H - (250 * sy);
+    const nameW = W - (160 * sx);
+    const nameH = 190 * sy;
+    const nameFont = Math.round(64 * 1.3 * s);
+    drawTextBox(cf, nameX, nameY, nameW, nameH, (data.name||"").trim() || "—", nameFont, "center");
+    downloadPng(front, `${name}_F.png`);
+
+    // BACK
+    const back = document.createElement("canvas");
+    back.width = W; back.height = H;
+    const cb = back.getContext("2d");
+    drawCardBase(cb, W, H);
+
+    // FIX: show Xd6 / Yd6 on Card B
+    drawCircleStat(cb, cx, cy, r, `${data.body ?? 1}d6`, `rgba(255,0,0,${circleAlpha})`);
+    drawCircleStat(cb, W - cx, cy, r, `${data.mind ?? 1}d6`, `rgba(0,0,255,${circleAlpha})`);
+
+    const backX = 80 * sx;
+    const backY = 320 * sy;
+    const backW = W - (160 * sx);
+    const backH = H - (400 * sy);
+    drawBackTextBox(cb, backX, backY, backW, backH, s);
+    downloadPng(back, `${name}_B.png`);
+
+    // Restore lock state
+    data.portrait.locked = prevLocked;
+    updatePortraitLockUI();
+
+    toast("Exported card PNGs");
+  }
+
+  // --- Init
+  function init(){
+    const isMobile = window.matchMedia && window.matchMedia("(max-width: 980px)").matches;
+
+    loadAutosave();
+    normaliseDerived();
+
+    // default: portrait locked on mobile if no autosave state existed
+    if(data.portrait && typeof data.portrait.locked === "boolean"){
+      // keep autosave lock state
+    } else {
+      data.portrait.locked = !!isMobile;
+    }
+
+    syncInputsFromData();
+    refreshAll();
+
+    if(data.portrait.dataUrl) loadPortraitFromDataUrl(data.portrait.dataUrl);
+    updatePortraitLockUI();
+    renderPortrait();
+
+    // collapse defaults
+    $("detailsCheck").open = false;
+    $("detailsDamage").open = false;
+    $("detailsQuickRef").open = false;
+
+    saveAutosave();
+  }
+
+  bindInputs();
+  init();
+
+})();
+</script>
+</body>
+</html>

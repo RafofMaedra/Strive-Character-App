@@ -3116,46 +3116,60 @@
     c.closePath();
   }
 
-  function drawCardBase(c, W, H){
+  function drawCardBase(c, W, H, { pImg, pCanvas, pData }){
     const refW = 1000, refH = 1400;
     const sx = W / refW;
     const sy = H / refH;
-    const s = Math.min(sx, sy);
+    const s  = Math.min(sx, sy);
 
     c.clearRect(0,0,W,H);
     c.save();
 
+    // Border thickness (keeps your "doubled" intent)
     const borderW = 30 * s;
-    const cornerR = Math.max(46 * s, borderW + (18 * s));
-    const maskCornerR = cornerR + (1 * s);
 
+    // IMPORTANT: corner radius MUST be > borderW (otherwise inner cutout becomes square)
+    const cornerR = Math.max(46 * s, borderW + (18 * s));
+    const maskCornerR = cornerR + (1 * s); // slightly rounder mask so no pixels peek outside
+
+    // Clip to rounded rect so outer corners are transparent in PNG
     roundRectPath(c, 0,0,W,H, maskCornerR);
     c.clip();
 
-    if(portraitImg){
-      const imgSx = W / canvas.width;
-      const imgSy = H / canvas.height;
-      drawCoverImage(c, W, H, portraitImg, data.portrait.zoom, data.portrait.offX * imgSx, data.portrait.offY * imgSy);
+    // Background: portrait cover-cropped (using live portrait zoom/offset)
+    if(pImg){
+      const imgSx = W / pCanvas.width;
+      const imgSy = H / pCanvas.height;
+
+      drawCoverImage(
+        c, W, H,
+        pImg,
+        pData.portrait.zoom,
+        pData.portrait.offX * imgSx,
+        pData.portrait.offY * imgSy
+      );
     }else{
       c.fillStyle = "rgba(0,0,0,0.25)";
       c.fillRect(0,0,W,H);
     }
 
+    // Dark wash overlay
     c.fillStyle = "rgba(0,0,0,0.18)";
     c.fillRect(0,0,W,H);
 
     c.restore();
 
+    // Border ring: outer minus inner using even-odd fill (drawn INSIDE)
     const inset = Math.min(borderW, (Math.min(W,H) / 2) - 1);
     const innerR = Math.max(1, cornerR - inset);
 
     function addRoundRectSubpath(ctx2, x, y, w, h, r){
       const rr = Math.min(r, w/2, h/2);
-      ctx2.moveTo(x+rr, y);
-      ctx2.arcTo(x+w, y, x+w, y+h, rr);
-      ctx2.arcTo(x+w, y+h, x, y+h, rr);
-      ctx2.arcTo(x, y+h, x, y, rr);
-      ctx2.arcTo(x, y, x+w, y, rr);
+      ctx2.moveTo(x + rr, y);
+      ctx2.arcTo(x + w, y,     x + w, y + h, rr);
+      ctx2.arcTo(x + w, y + h, x,     y + h, rr);
+      ctx2.arcTo(x,     y + h, x,     y,     rr);
+      ctx2.arcTo(x,     y,     x + w, y,     rr);
       ctx2.closePath();
     }
 
@@ -3167,6 +3181,7 @@
     c.fill("evenodd");
     c.restore();
 
+    // Thin highlight stroke (inset)
     c.save();
     const hiInset = inset * 0.5;
     const hiR = Math.max(1, cornerR - hiInset);
@@ -3248,7 +3263,7 @@
     return lineCount;
   }
 
-  function drawBackTextBox(c, x,y,w,h, scale=1){
+  function drawBackTextBox(c, x, y, w, h, theData, scale=1){
     c.save();
     roundRectPath(c, x,y,w,h, 34);
     c.fillStyle = "rgba(0,0,0,0.55)";
@@ -3266,10 +3281,10 @@
     let ty = y + pad;
     const tw = w - pad*2;
 
-    const skills = (data.skills||[]).map(s => `• ${s.name || "Unnamed"}`).join("\n") || "• —";
-    const feats = (data.features_text||"")
+    const skills = (theData.skills || []).map(s => `• ${s.name || "Unnamed"}`).join("\n") || "• —";
+    const feats  = (theData.features_text || "")
       .split(/\r?\n/).map(l=>l.trim()).filter(Boolean)
-      .map(l=>l.startsWith("•")? l : `• ${l}`).join("\n") || "• —";
+      .map(l=>l.startsWith("•") ? l : `• ${l}`).join("\n") || "• —";
 
     const block = `Skills:\n${skills}\n\nFeatures:\n${feats}`;
 
@@ -3286,7 +3301,8 @@
         ty += lh * 0.6;
         continue;
       }
-      const used = wrapText(c, ln, tx, ty, tw, lh, Math.floor((y+h - ty - pad)/lh));
+      const remainingLines = Math.floor((y + h - ty - pad) / lh);
+      const used = wrapText(c, ln, tx, ty, tw, lh, remainingLines);
       ty += lh * used;
       if(ty > y + h - pad) break;
     }
@@ -3306,6 +3322,7 @@
   function exportCardPNGs(){
     const name = safeFileName(data.name);
 
+    // Guardrail: force-lock portrait while exporting (prevents mid-gesture drift)
     const prevLocked = data.portrait.locked;
     data.portrait.locked = true;
     updatePortraitLockUI();
@@ -3314,56 +3331,63 @@
     pinchStartDist = 0;
 
     const W = EXPORT_CARD_W, H = EXPORT_CARD_H;
+
     const refW = 1000, refH = 1400;
     const sx = W / refW;
     const sy = H / refH;
-    const s = Math.min(sx, sy);
+    const s  = Math.min(sx, sy);
 
-    const circleAlpha = 0.55;
+    const circleAlpha = 0.55; // match text box opacity
 
-    // FRONT
+    const portraitCanvas = $("portraitCanvas");
+
+    // ---------- FRONT ----------
     const front = document.createElement("canvas");
     front.width = W; front.height = H;
     const cf = front.getContext("2d");
-    drawCardBase(cf, W, H);
 
+    drawCardBase(cf, W, H, { pImg: portraitImg, pCanvas: portraitCanvas, pData: data });
+
+    // Circles: red left, blue right (alpha matches text boxes)
     const cx = 140 * sx;
     const cy = 140 * sy;
     const r  = 90  * s;
+    drawCircleStat(cf, cx,     cy, r, data.grit_max  ?? 0, `rgba(255,0,0,${circleAlpha})`);
+    drawCircleStat(cf, W - cx, cy, r, data.focus_max ?? 0, `rgba(0,0,255,${circleAlpha})`);
 
-    drawCircleStat(cf, cx, cy, r, data.grit_max ?? 0, `rgba(255,0,0,${circleAlpha})`);
-    drawCircleStat(cf, W - cx, cy, r, data.focus_max ?? 0, `rgba(0,120,255,${circleAlpha})`);
+    // Name box (font +30%)
+    const nameX = 80 * sx;
+    const nameY = H - (250 * sy);
+    const nameW = W - (160 * sx);
+    const nameH = 190 * sy;
+    const nameFont = Math.round(64 * 1.3 * s);
+    drawTextBox(cf, nameX, nameY, nameW, nameH, (data.name || "").trim() || "—", nameFont, "center");
 
-    const nm = (data.name || "—").trim() || "—";
-    const nameBoxW = 760 * sx;
-    const nameBoxH = 120 * sy;
-    const nameBoxX = (W - nameBoxW) / 2;
-    const nameBoxY = H - (190 * sy);
-    const nameFont = Math.round(64 * s);
-    drawTextBox(cf, nameBoxX, nameBoxY, nameBoxW, nameBoxH, nm, nameFont, "center");
+    downloadPng(front, `${name}_F.png`);
 
-    const lvl = `Level ${safeInt(data.level,1)}`;
-    drawTextBox(cf, nameBoxX, nameBoxY + (140*sy), nameBoxW, 90*sy, lvl, Math.round(46*s), "center");
-
-    // BACK
+    // ---------- BACK ----------
     const back = document.createElement("canvas");
     back.width = W; back.height = H;
     const cb = back.getContext("2d");
-    drawCardBase(cb, W, H);
 
-    const boxX = 90 * sx;
-    const boxY = 120 * sy;
-    const boxW = W - boxX*2;
-    const boxH = H - boxY*2;
-    drawBackTextBox(cb, boxX, boxY, boxW, boxH, s);
+    drawCardBase(cb, W, H, { pImg: portraitImg, pCanvas: portraitCanvas, pData: data });
 
-    downloadPng(front, `${name}_F.png`);
+    // show Xd6 / Yd6 on Card B
+    drawCircleStat(cb, cx,     cy, r, `${data.body ?? 1}d6`, `rgba(255,0,0,${circleAlpha})`);
+    drawCircleStat(cb, W - cx, cy, r, `${data.mind ?? 1}d6`, `rgba(0,0,255,${circleAlpha})`);
+
+    const backX = 80 * sx;
+    const backY = 320 * sy;
+    const backW = W - (160 * sx);
+    const backH = H - (400 * sy);
+    drawBackTextBox(cb, backX, backY, backW, backH, data, s);
+
     downloadPng(back, `${name}_B.png`);
 
+    // Restore lock state
     data.portrait.locked = prevLocked;
     updatePortraitLockUI();
-    saveAutosave();
-    toast("Exported cards");
+    toast("Exported card PNGs");
   }
 
   // --- Init

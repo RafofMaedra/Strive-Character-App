@@ -156,11 +156,10 @@
       "core portrait"
       "skills portrait"
       "features details"
-      "wealth details"
-      "rolls rolls";
+      "wealth details";
   }
   @media (max-width: 980px){
-    /* Mobile order: vitals ABOVE portrait; check/damage at bottom */
+    /* Mobile order: vitals ABOVE portrait */
     .grid{
       grid-template-columns: 1fr;
       grid-template-areas:
@@ -170,8 +169,7 @@
         "skills"
         "features"
         "details"
-        "wealth"
-        "rolls";
+        "wealth";
     }
   }
 
@@ -380,12 +378,13 @@
     padding: 16px;
     z-index: 500;
   }
+  /* PATCH: make in-app windows effectively opaque for readability */
   .modal{
     width:min(720px, 100%);
     max-height: min(92vh, 900px);
     overflow:auto;
-    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-    border:1px solid var(--border);
+    background: rgba(23,26,33,.98); /* was translucent gradient */
+    border:1px solid rgba(255,255,255,.18);
     border-radius: 18px;
     box-shadow: 0 18px 60px rgba(0,0,0,.55);
   }
@@ -395,8 +394,8 @@
     align-items:center;
     justify-content:space-between;
     gap:10px;
-    border-bottom:1px solid var(--border);
-    background: rgba(0,0,0,.20);
+    border-bottom:1px solid rgba(255,255,255,.14);
+    background: rgba(17,20,26,.98);
   }
   .modal .mh .title{
     font-weight:950;
@@ -405,8 +404,8 @@
   .modal .mb{ padding:14px; }
   .modal .mf{
     padding:12px 14px;
-    border-top:1px solid var(--border);
-    background: rgba(0,0,0,.16);
+    border-top:1px solid rgba(255,255,255,.14);
+    background: rgba(17,20,26,.98);
     display:flex;
     gap:10px;
     justify-content:flex-end;
@@ -450,17 +449,14 @@
     </div>
 
     <div class="top-actions">
-      <!-- New menu (always visible; on mobile this is the main control) -->
       <select id="newMenu" aria-label="New">
         <option value="">New…</option>
         <option value="blank">New (Blank)</option>
         <option value="guided">New (Guided Creation)</option>
       </select>
 
-      <!-- Mobile: compact menu button -->
       <button class="mobileOnly" id="btnMenu" title="Menu">☰</button>
 
-      <!-- Desktop: keep key actions visible -->
       <button class="desktopOnly" id="btnOpen">Open…</button>
       <button class="desktopOnly primary" id="btnSave">Export JSON</button>
       <button class="desktopOnly" id="btnExportCards">Export Card PNGs</button>
@@ -473,7 +469,7 @@
 <main class="wrap">
   <div class="tabs">
     <div class="tab active" data-tab="character">Character</div>
-    <div class="tab" data-tab="details">Details</div>
+    <div class="tab" data-tab="details">Notes</div>
     <div class="tab" data-tab="about">About</div>
   </div>
 
@@ -559,7 +555,7 @@
       <div class="card" style="grid-area:core" id="cardCore">
         <div class="hd">
           <div class="t">Core</div>
-          <span class="pill" id="kpiThreshold">Success: 3+</span>
+          <span class="pill" id="kpiThreshold">Success Threshold: 3+</span>
         </div>
         <div class="bd">
           <div class="fields">
@@ -663,21 +659,20 @@
             </div>
             <div class="field span8">
               <label for="wealthOther">Other</label>
-              <input id="wealthOther" type="text" enterkeyhint="done" />
+              <textarea id="wealthOther" placeholder=""></textarea>
             </div>
           </div>
         </div>
       </div>
 
-
     </div>
   </section>
 
-  <!-- DETAILS TAB -->
+  <!-- NOTES TAB -->
   <section id="tab-details" style="display:none;">
     <div class="card">
       <div class="hd">
-        <div class="t">Details</div>
+        <div class="t">Notes</div>
         <span class="pill">Freeform notes</span>
       </div>
       <div class="bd">
@@ -695,8 +690,7 @@
           <p style="margin-top:0;">
             Skill tags:
             <b style="color:var(--text)">(B)</b> Broad,
-            <b style="color:var(--text)">(N)</b> Narrow,
-            <b style="color:var(--text)">(S)</b> Signature.
+            <b style="color:var(--text)">(N)</b> Narrow.
           </p>
           <p>
             Card Export creates two PNG files:
@@ -707,6 +701,9 @@
           <p>
             Species traits (examples): Lowlight Vision, Underwater Adaptions, Heat Resistance.
           </p>
+          <p>
+            Level Up is guided by the rules. If you need homebrew/GM edge cases, just edit the sheet fields directly (Level, max pools, Strive Dice max, etc.).
+          </p>
         </div>
       </div>
     </div>
@@ -714,10 +711,8 @@
 
 </main>
 
-<!-- Hidden file input for JSON import -->
 <input id="jsonFile" type="file" accept="application/json,.json" style="display:none;" />
 
-<!-- Modal -->
 <div class="modalBackdrop" id="modalBackdrop">
   <div class="modal" role="dialog" aria-modal="true" aria-label="Modal">
     <div class="mh">
@@ -746,14 +741,11 @@
   const now = () => Date.now();
 
   const STORAGE_KEY = "strive_character_creator_v4";
-  const SUCCESS_THRESHOLD = 3; // success on d6 >= 3 (matches your card-style "3+")
   const FONT_SERIF = '"Times New Roman", Times, serif';
 
-  // Card export output size (PNG)
   const EXPORT_CARD_W = 928;
   const EXPORT_CARD_H = 1312;
 
-  // --- Data model
   const data = {
     name: "",
     level: 1,
@@ -772,6 +764,9 @@
     details: "",
     wealth_coins: 0,
     wealth_other: "",
+    mastery_skill: "",
+    threat_assist_cost: null,
+    advancement_log: { applied_levels: [] },
     portrait: {
       dataUrl: null,
       zoom: 1.0,
@@ -781,7 +776,6 @@
     }
   };
 
-  // --- Toast
   let toastTimer = null;
   function toast(msg){
     const t = $("toast");
@@ -791,7 +785,6 @@
     toastTimer = setTimeout(()=>t.classList.remove("show"), 1400);
   }
 
-  // --- Autosave
   let lastSave = 0;
   function saveAutosave(){
     try{
@@ -821,7 +814,6 @@
     $("savedBadge").textContent = "—";
   }
 
-  // --- UI binding
   function bindInputs(){
     const bind = (id, key, parser) => {
       const el = $(id);
@@ -853,13 +845,11 @@
     bind("wealthCoins", "wealth_coins", (v)=>Math.max(0, safeInt(v,0)));
     bind("wealthOther", "wealth_other", (v)=>String(v||""));
 
-    // quick +/- vitals
     $("btnGritMinus").addEventListener("click", ()=>{ data.grit_cur = clamp(data.grit_cur-1, 0, data.grit_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
     $("btnGritPlus").addEventListener("click", ()=>{ data.grit_cur = clamp(data.grit_cur+1, 0, data.grit_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
     $("btnFocusMinus").addEventListener("click", ()=>{ data.focus_cur = clamp(data.focus_cur-1, 0, data.focus_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
     $("btnFocusPlus").addEventListener("click", ()=>{ data.focus_cur = clamp(data.focus_cur+1, 0, data.focus_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
 
-    // New menu
     $("newMenu").addEventListener("change", () => {
       const v = $("newMenu").value;
       $("newMenu").value = "";
@@ -867,7 +857,6 @@
       if(v === "guided") openGuidedCreation();
     });
 
-    // Menu / modal actions
     $("btnMenu").addEventListener("click", openMobileMenu);
 
     $("btnOpen").addEventListener("click", ()=>$("jsonFile").click());
@@ -878,7 +867,6 @@
     $("btnLevelUp").addEventListener("click", openLevelUp);
     $("btnClearAutosave").addEventListener("click", ()=>{ clearAutosave(); });
 
-    // portrait controls
     $("portraitZoom").addEventListener("input", ()=>{
       setPortraitZoom(safeFloat($("portraitZoom").value, 1.0));
     });
@@ -908,7 +896,6 @@
     });
     $("portraitFile").addEventListener("change", onPortraitFile);
 
-    // skills
     $("btnAddSkill").addEventListener("click", ()=>openSkillEditor(null));
   }
 
@@ -926,10 +913,35 @@
     data.dp_cur    = clamp(safeInt(data.dp_cur,0), 0, data.dp_max);
 
     if(!Array.isArray(data.skills)) data.skills = [];
+    // PATCH: remove Signature tag support; coerce any invalid tags (including "S") to "B"
+    for(const s of data.skills){
+      if(!s || typeof s !== "object") continue;
+      const t = String(s.tag || "B").toUpperCase().trim();
+      s.tag = (t === "N" || t === "B") ? t : "B";
+      s.dice = clamp(safeInt(s.dice,1), 1, 6);
+      s.defensive = !!s.defensive;
+      s.name = String(s.name || "").trim();
+    }
+
     if(typeof data.features_text !== "string") data.features_text = "";
     if(typeof data.details !== "string") data.details = "";
     if(typeof data.wealth_other !== "string") data.wealth_other = "";
     data.wealth_coins = Math.max(0, safeInt(data.wealth_coins,0));
+
+    if(typeof data.mastery_skill !== "string") data.mastery_skill = "";
+    if(!(data.threat_assist_cost === null || Number.isFinite(safeInt(data.threat_assist_cost, NaN)))) data.threat_assist_cost = null;
+
+    if(!data.advancement_log || typeof data.advancement_log !== "object"){
+      data.advancement_log = { applied_levels: [] };
+    }
+    if(!Array.isArray(data.advancement_log.applied_levels)){
+      data.advancement_log.applied_levels = [];
+    } else {
+      data.advancement_log.applied_levels = data.advancement_log.applied_levels
+        .map(n => clamp(safeInt(n, 0), 0, 12))
+        .filter(n => n >= 1 && n <= 12);
+      data.advancement_log.applied_levels = [...new Set(data.advancement_log.applied_levels)];
+    }
 
     if(!data.portrait || typeof data.portrait !== "object"){
       data.portrait = {dataUrl:null, zoom:1, offX:0, offY:0, locked:false};
@@ -978,6 +990,13 @@
     $("vDice").textContent = `${data.dp_cur ?? 0} / ${data.dp_max ?? 0}`;
   }
 
+  function refreshSuccessThreshold(){
+    const skills = Array.isArray(data.skills) ? data.skills : [];
+    const th = skills.some(s => !!(s && s.defensive)) ? 4 : 3;
+    const el = $("kpiThreshold");
+    if(el) el.textContent = `Success Threshold: ${th}+`;
+  }
+
   function refreshSkills(){
     const list = $("skillsList");
     list.innerHTML = "";
@@ -993,7 +1012,7 @@
 
     for(let i=0;i<skills.length;i++){
       const s = skills[i];
-      const tag = s.tag || "B";
+      const tag = (s.tag === "N" || s.tag === "B") ? s.tag : "B";
       const dice = clamp(safeInt(s.dice,1), 1, 6);
       const def = !!s.defensive;
 
@@ -1039,14 +1058,13 @@
     }
   }
 
-
   function refreshAll(){
     refreshVitals();
     refreshSkills();
+    refreshSuccessThreshold();
     if($("detailsBig").value !== data.details) $("detailsBig").value = data.details || "";
   }
 
-  // --- Tabs
   function setTab(name){
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     $("tab-character").style.display = (name === "character") ? "" : "none";
@@ -1057,7 +1075,6 @@
     t.addEventListener("click", ()=>setTab(t.dataset.tab));
   });
 
-  // --- Modal framework
   const modalBackdrop = $("modalBackdrop");
   const modalTitle = $("modalTitle");
   const modalBody = $("modalBody");
@@ -1120,7 +1137,6 @@
     openModal({ title:"Menu", bodyNode: wrap, footerButtons:[closeBtn] });
   }
 
-  // --- Reset helpers (ensures new characters wipe EVERYTHING including portrait)
   function resetCharacterToBlank(){
     Object.assign(data, {
       name:"",
@@ -1137,6 +1153,9 @@
       details:"",
       wealth_coins:0,
       wealth_other:"",
+      mastery_skill:"",
+      threat_assist_cost:null,
+      advancement_log:{ applied_levels: [] },
       portrait:{ dataUrl:null, zoom:1.0, offX:0, offY:0, locked:data.portrait?.locked ?? false }
     });
     portraitImg = null;
@@ -1155,36 +1174,133 @@
     toast("New (Blank)");
   }
 
-  // --- Guided creation (core-rulebook accurate)
   const PRESET_SPECIES = ["Human","Dwarf","Elf","Seafolk","Custom"];
   const PRESET_BACKGROUNDS = ["Custom","Warrior","Mage","Priest","Thief","Ranger"];
 
   const BG_SKILLS = {
     Warrior:["Melee Weapons","Ranged Weapons","Manual Labour","Metalcraft"],
-    Mage:["Magic: Elements","Magic: Wards","Academics","Parlour Magic"],
+    Mage:["Magic: Elements","Magic: Warding","Academics","Parlour Magic"],
     Priest:["Magic: Healing","Melee Weapons","Faith","Insight"],
-    Thief:["Melee Weapons","Roguery","Stealth","Social Manipulation"], // first slot can be swapped to Ranged
+    Thief:["Melee Weapons","Roguery","Stealth","Social Manipulation"],
     Ranger:["Ranged Weapons","Scout","Vigilance","Natural World"]
   };
 
   const TRAIT_EXAMPLES = ["Lowlight Vision","Underwater Adaptions","Heat Resistance"];
 
+  const FEAT_TEMPLATES = [
+    { id:"learned", name:"Learned", desc:"Learn 3 additional skills.", learned:true, fields:[] },
+    { id:"tough", name:"Tough",
+      desc:"Due to your {{aspect}}, whenever you take {{pool}} damage, reduce it by 1.",
+      learned:false,
+      fields:[
+        { key:"aspect", label:"Character Aspect", type:"text" },
+        { key:"pool", label:"Grit or Focus", type:"choice", options:["Grit","Focus"] }
+      ]
+    },
+    { id:"resistant", name:"Resistant",
+      desc:"Due to your {{aspect}}, reduce {{type}} damage by 2.",
+      learned:false,
+      fields:[
+        { key:"aspect", label:"Character Aspect", type:"text" },
+        { key:"type", label:"Type", type:"text" }
+      ]
+    },
+    { id:"dealer", name:"Dealer",
+      desc:"When you roll to Fight or Major Impact with {{skill}}, add one additional Success.",
+      learned:false,
+      fields:[ { key:"skill", label:"Skill", type:"skill" } ]
+    },
+    { id:"martyr", name:"Martyr",
+      desc:"When you're below half your total {{pool}}, your Fight or Major Impact Successes create Opportunity for your allies.",
+      learned:false,
+      fields:[ { key:"pool", label:"Grit or Focus", type:"choice", options:["Grit","Focus"] } ]
+    },
+    { id:"defiant", name:"Defiant",
+      desc:"Once per combat, when you reach death's door, regain 1 Grit and 1 Focus.",
+      learned:false, fields:[]
+    },
+    { id:"reckless", name:"Reckless",
+      desc:"Once per check, when you spend 6 {{pool}} to push a roll, deal an additional Success.",
+      learned:false,
+      fields:[ { key:"pool", label:"Grit or Focus", type:"choice", options:["Grit","Focus"] } ]
+    },
+    { id:"guardian", name:"Guardian",
+      desc:"Once per round, when a nearby ally would take damage, you may redirect that damage to yourself and reduce it by 1.",
+      learned:false, fields:[]
+    },
+    { id:"reliable", name:"Reliable",
+      desc:"Once per check, when you roll a 1 on a {{skill}} check, re-roll all 1s and use the new results.",
+      learned:false,
+      fields:[ { key:"skill", label:"Skill", type:"skill" } ]
+    },
+    { id:"efficient", name:"Efficient",
+      desc:"When you push a {{skill}} roll, increase the roll by 2 for each point of Grit or Focus spent.",
+      learned:false,
+      fields:[ { key:"skill", label:"Skill", type:"skill" } ]
+    },
+    { id:"specialist", name:"Specialist",
+      desc:"When you use {{narrowSkill}}, add one additional Success to your roll.",
+      learned:false,
+      fields:[ { key:"narrowSkill", label:"Narrow Skill", type:"skill" } ]
+    },
+    { id:"ranger", name:"Ranger",
+      desc:"In {{environment}}, add an additional Success when making {{skill}} checks.",
+      learned:false,
+      fields:[
+        { key:"environment", label:"Environment", type:"text" },
+        { key:"skill", label:"Skill", type:"skill" }
+      ]
+    },
+    { id:"alchemist", name:"Alchemist",
+      desc:"When combining {{skill1}} with {{skill2}}, add an additional Success instead of adding +1.",
+      learned:false,
+      fields:[
+        { key:"skill1", label:"Skill (first)", type:"skill" },
+        { key:"skill2", label:"Skill (second)", type:"skill" }
+      ]
+    },
+    { id:"cooperative", name:"Cooperative",
+      desc:"When you combine your skill with an ally's on a group check, add an additional Success to your roll.",
+      learned:false, fields:[]
+    },
+    { id:"vengeful", name:"Vengeful",
+      desc:"In combat, whenever you take 6 damage from a single source, deal an immediate Success in retaliation.",
+      learned:false, fields:[]
+    },
+    { id:"trait", name:"Trait",
+      desc:"Due to your {{aspect}}, you now have {{trait}}.",
+      learned:false,
+      fields:[
+        { key:"aspect", label:"Character Aspect", type:"text" },
+        { key:"trait", label:"Trait", type:"text" }
+      ]
+    }
+  ];
+
+  function getFeatTemplate(id){
+    return FEAT_TEMPLATES.find(f => f.id === id) || null;
+  }
+
+  function fillTemplate(str, vars){
+    return String(str||"").replace(/\{\{(\w+)\}\}/g, (_, k) => {
+      const v = (vars && Object.prototype.hasOwnProperty.call(vars, k)) ? vars[k] : "";
+      return String(v ?? "").trim();
+    });
+  }
+
   function openGuidedCreation(){
     const state = {
       step: 0,
+      stepChanged: "",
       name: "",
       species: "Human",
       background: "Warrior",
-
-      baseGrit: 4, // these MUST sum to 8
+      baseGrit: 4,
       baseFocus: 4,
-
       thiefWeapon: "Melee Weapons",
-
       customBonusGrit: 0,
       customBonusFocus: 0,
       customTraitsText: "",
-
       skills: []
     };
 
@@ -1197,7 +1313,6 @@
     ];
 
     function speciesMeta(){
-      // returns {bg, bf, extraSkill, traits:[]}
       if(state.species === "Human") return { bg:1, bf:1, extraSkill:1, traits:[] };
       if(state.species === "Dwarf") return { bg:2, bf:0, extraSkill:0, traits:["Lowlight Vision"] };
       if(state.species === "Elf") return { bg:0, bf:3, extraSkill:0, traits:[] };
@@ -1217,18 +1332,21 @@
       return { bg:0, bf:0, extraSkill:0, traits:[] };
     }
 
+    function isSeedDefensiveSkill(nm){
+      const n = String(nm||"").trim();
+      return (n === "Magic: Warding" || n === "Magic: Wards");
+    }
+
     function seedSkillsFromBackground(){
       if(state.background === "Custom"){
         state.skills = [];
         return;
       }
       const base = (BG_SKILLS[state.background] || []).slice(0, 4);
-
-      // thief weapon choice for slot 0
       if(state.background === "Thief"){
         base[0] = state.thiefWeapon;
       }
-      state.skills = base.map(nm => ({ name:nm, tag:"B", dice:1, defensive:false }));
+      state.skills = base.map(nm => ({ name:nm, tag:"B", dice:1, defensive:isSeedDefensiveSkill(nm) }));
     }
 
     seedSkillsFromBackground();
@@ -1261,12 +1379,9 @@
           state.step++;
           rerender();
         }else{
-          // APPLY: full wipe first (including portrait), then apply wizard output
           resetCharacterToBlank();
 
           const sm = speciesMeta();
-
-          // base pools (8 split) + species bonus
           const gritMax = clamp(safeInt(state.baseGrit,4), 0, 8) + sm.bg;
           const focusMax = clamp(safeInt(state.baseFocus,4), 0, 8) + sm.bf;
 
@@ -1279,10 +1394,8 @@
           data.focus_max = focusMax;
           data.focus_cur = focusMax;
 
-          // skills: backgrounds provide 4; human gets to choose a 5th in step 5
           data.skills = state.skills.slice(0);
 
-          // traits -> features
           if(sm.traits.length){
             const lines = sm.traits.map(t => `• Trait: ${t}`);
             data.features_text = lines.join("\n");
@@ -1363,14 +1476,12 @@
       const cR = box.querySelector("#cRemain");
 
       sel.value = state.species;
-
       cG.value = String(state.customBonusGrit);
       cF.value = String(state.customBonusFocus);
       cT.value = String(state.customTraitsText || "");
 
       function update(){
         state.species = sel.value;
-
         customBlock.style.display = (state.species === "Custom") ? "" : "none";
 
         const sm = speciesMeta();
@@ -1387,7 +1498,6 @@
       }
 
       function enforceCustomSum(changed){
-        // Keep cG + cF <= 3
         let bg = clamp(safeInt(cG.value,0), 0, 3);
         let bf = clamp(safeInt(cF.value,0), 0, 3);
         if(bg + bf > 3){
@@ -1444,7 +1554,6 @@
 
       function update(){
         state.background = sel.value;
-
         thiefWrap.style.display = (state.background === "Thief") ? "" : "none";
 
         if(state.background === "Custom") info.textContent = "Custom: choose 4 starting skills in the next step.";
@@ -1495,19 +1604,30 @@
       g.value = state.baseGrit;
       f.value = state.baseFocus;
 
-      function sync(){
+      function sync(changed){
         let gg = clamp(safeInt(g.value,4), 0, 8);
         let ff = clamp(safeInt(f.value,4), 0, 8);
         const total = gg + ff;
+
         if(total !== 8){
-          if(document.activeElement === g){
+          if(changed === "G"){
             ff = clamp(8 - gg, 0, 8);
             f.value = String(ff);
-          }else{
+          }else if(changed === "F"){
             gg = clamp(8 - ff, 0, 8);
             g.value = String(gg);
+          }else{
+            // fallback (shouldn't happen), preserve old behaviour
+            if(document.activeElement === g){
+              ff = clamp(8 - gg, 0, 8);
+              f.value = String(ff);
+            }else{
+              gg = clamp(8 - ff, 0, 8);
+              g.value = String(gg);
+            }
           }
         }
+
         state.baseGrit = gg;
         state.baseFocus = ff;
         sum.textContent = `Base Total: ${state.baseGrit + state.baseFocus} / 8`;
@@ -1515,9 +1635,10 @@
         const sm = speciesMeta();
         fin.textContent = `Final: Grit ${state.baseGrit + sm.bg}, Focus ${state.baseFocus + sm.bf}`;
       }
-      g.addEventListener("input", sync);
-      f.addEventListener("input", sync);
-      sync();
+
+      g.addEventListener("input", ()=>sync("G"));
+      f.addEventListener("input", ()=>sync("F"));
+      sync("G");
       return box;
     }
 
@@ -1552,10 +1673,8 @@
         }, rerender);
       });
       header.appendChild(addBtn);
-
       box.appendChild(header);
 
-      // For Human: add a quick "bonus skill" helper if not already present
       const humanHelp = document.createElement("div");
       humanHelp.style.marginTop = "10px";
       humanHelp.style.color = "var(--muted)";
@@ -1564,16 +1683,7 @@
       humanHelp.textContent = "Human: you get one bonus skill (total 5).";
       box.appendChild(humanHelp);
 
-      // Background Custom: seed empty, force 4 (or 5 for human)
-      if(state.background === "Custom" && state.skills.length === 0){
-        // keep empty; user chooses
-      }else{
-        // ensure correct seed count if something changed
-        // (don’t override if user has already edited skills)
-        if(state.skills.length === 0){
-          seedSkillsFromBackground();
-        }
-      }
+      if(state.background !== "Custom" && state.skills.length === 0) seedSkillsFromBackground();
 
       const list = document.createElement("div");
       list.className = "list";
@@ -1581,7 +1691,6 @@
       box.appendChild(list);
 
       function draw(){
-        // Hard clamp to required (prevents accidental extra)
         if(state.skills.length > required) state.skills = state.skills.slice(0, required);
 
         list.innerHTML = "";
@@ -1629,41 +1738,28 @@
           list.appendChild(row);
         });
 
-        // If background is not custom and user is underfilled, allow quick "reset to background"
         if(state.background !== "Custom"){
           const resetBtn = document.createElement("button");
           resetBtn.textContent = "Reset to background skills";
           resetBtn.addEventListener("click", ()=>{
             seedSkillsFromBackground();
-            // If human, leave room for bonus skill
-            if(state.species === "Human"){
-              state.skills = state.skills.slice(0, 4);
-            }
+            if(state.species === "Human") state.skills = state.skills.slice(0, 4);
             draw();
           });
           list.appendChild(resetBtn);
         }
       }
 
-      // Ensure thief selection is reflected if user hasn't edited
       if(state.background === "Thief"){
         const expected0 = state.thiefWeapon;
         if(state.skills.length > 0 && state.skills[0] && state.skills[0].name !== expected0){
-          // Only auto-correct if it still looks like seeded list
           const seeded = BG_SKILLS.Thief;
           const looksSeeded = state.skills.length === 4 && state.skills.slice(1).every((x,i)=>x.name === seeded[i+1]);
           if(looksSeeded) state.skills[0].name = expected0;
         }
       }
 
-      // Enforce human bonus slot (5th skill) vs others (4)
-      if(state.species !== "Human" && state.skills.length > 4){
-        state.skills = state.skills.slice(0, 4);
-      }
-      if(state.species === "Human" && state.background !== "Custom" && state.skills.length === 4){
-        // fine; user can add the 5th
-      }
-
+      if(state.species !== "Human" && state.skills.length > 4) state.skills = state.skills.slice(0, 4);
       draw();
       return box;
     }
@@ -1687,12 +1783,12 @@
 
     const fTag = document.createElement("div");
     fTag.className = "field span4";
+    /* PATCH: remove Signature tag option */
     fTag.innerHTML = `
       <label>Tag</label>
       <select id="skTag">
         <option value="B">(B) Broad</option>
         <option value="N">(N) Narrow</option>
-        <option value="S">(S) Signature</option>
       </select>
     `;
     wrap.appendChild(fTag);
@@ -1715,7 +1811,7 @@
     const defEl  = wrap.querySelector("#skDef");
 
     nameEl.value = s0.name || "";
-    tagEl.value  = s0.tag || "B";
+    tagEl.value  = (s0.tag === "N" || s0.tag === "B") ? s0.tag : "B";
     diceEl.value = String(clamp(safeInt(s0.dice,1),1,6));
     defEl.checked = !!s0.defensive;
 
@@ -1738,7 +1834,7 @@
       if(!name){ toast("Skill name required"); return; }
       const skill = {
         name,
-        tag: tagEl.value || "B",
+        tag: (tagEl.value === "N" ? "N" : "B"),
         dice: clamp(safeInt(diceEl.value,1), 1, 6),
         defensive: !!defEl.checked
       };
@@ -1767,16 +1863,6 @@
     });
 
     setTimeout(()=>nameEl.focus(), 60);
-  }
-
-  // --- Roll / Damage tools
-  function rollD6(n){
-    const out = [];
-    for(let i=0;i<n;i++) out.push(1 + Math.floor(Math.random()*6));
-    return out;
-  }
-  function countSuccesses(rolls, threshold){
-    return rolls.reduce((acc,r)=>acc + (r >= threshold ? 1 : 0), 0);
   }
 
   // --- JSON export/import
@@ -1830,68 +1916,1000 @@
     reader.readAsText(f);
   }
 
-  // --- Level up (simple + manual-friendly)
+  // --- Level Up
   function openLevelUp(){
-    const wrap = document.createElement("div");
-    wrap.className = "fields";
+    normaliseDerived();
 
-    const p = document.createElement("div");
-    p.className = "field span12";
-    p.style.color = "var(--muted)";
-    p.style.lineHeight = "1.5";
-    p.innerHTML = `
-      <div class="pill">Level Up</div>
-      <div style="margin-top:8px;">
-        This is intentionally light-touch: it bumps Level by 1 and lets you adjust max pools manually.
-      </div>
-    `;
-    wrap.appendChild(p);
+    const fromLevel = clamp(safeInt(data.level,1), 1, 12);
+    const toLevel = clamp(fromLevel + 1, 1, 12);
 
-    const fLvl = document.createElement("div");
-    fLvl.className = "field span6";
-    fLvl.innerHTML = `<label>New Level</label><input id="luLevel" type="number" min="1" max="12" step="1">`;
-    wrap.appendChild(fLvl);
+    if(fromLevel >= 12){
+      toast("Already level 12");
+      return;
+    }
 
-    const fG = document.createElement("div");
-    fG.className = "field span3";
-    fG.innerHTML = `<label>Grit (max)</label><input id="luG" type="number" min="0" step="1">`;
-    wrap.appendChild(fG);
+    const alreadyApplied = (data.advancement_log?.applied_levels || []).includes(toLevel);
 
-    const fF = document.createElement("div");
-    fF.className = "field span3";
-    fF.innerHTML = `<label>Focus (max)</label><input id="luF" type="number" min="0" step="1">`;
-    wrap.appendChild(fF);
+    const lu = {
+      step: 0,
+      fromLevel,
+      toLevel,
+      allocG: 0,
+      allocF: 0,
+      bonusChoice: "", // "skill" | "grit" | "focus"
+      bonusSkill: null,
+      milestone: {
+        featTemplateId: "",
+        featVars: {},
+        customFeatName: "",
+        customFeatDesc: "",
+        featName: "",
+        featDesc: "",
+        learned: false,
+        learnedSkills: [],
+        statPick: "",
+        masterySkill: ""
+      }
+    };
 
-    const lvl = wrap.querySelector("#luLevel");
-    const g = wrap.querySelector("#luG");
-    const f = wrap.querySelector("#luF");
+    const needsFeat = [3,8,12].includes(toLevel);
+    const needsStat = (toLevel === 5);
+    const needsThreatAssist = (toLevel === 6);
+    const needsMastery = (toLevel === 10);
 
-    lvl.value = String(clamp((data.level||1) + 1, 1, 12));
-    g.value = String(data.grit_max||0);
-    f.value = String(data.focus_max||0);
+    const steps = [
+      { key:"alloc", title:"+4 to max pools", render: renderAlloc },
+      { key:"bonus", title:"Choose one bonus", render: renderBonus }
+    ];
+    if(needsFeat || needsStat || needsThreatAssist || needsMastery){
+      steps.push({ key:"milestone", title:"Milestone", render: renderMilestone });
+    }
+    steps.push({ key:"dice", title:"Strive Dice (max)", render: renderDice });
+    steps.push({ key:"summary", title:"Summary", render: renderSummary });
 
-    const btnCancel = document.createElement("button");
-    btnCancel.className="danger";
-    btnCancel.textContent="Cancel";
-    btnCancel.addEventListener("click", closeModal);
+    let btnNextRef = null;
+    function updateNextDisabled(){
+      if(btnNextRef) btnNextRef.disabled = !canProceedFromStep(lu.step);
+    }
 
-    const btnOK = document.createElement("button");
-    btnOK.className="primary";
-    btnOK.textContent="Apply";
-    btnOK.addEventListener("click", ()=>{
-      data.level = clamp(safeInt(lvl.value, data.level||1), 1, 12);
-      data.grit_max = Math.max(0, safeInt(g.value, data.grit_max||0));
-      data.focus_max = Math.max(0, safeInt(f.value, data.focus_max||0));
-      data.grit_cur = clamp(data.grit_cur, 0, data.grit_max);
-      data.focus_cur = clamp(data.focus_cur, 0, data.focus_max);
+    function gatherAllNewSkills(){
+      const out = [];
+      if(lu.bonusChoice === "skill" && lu.bonusSkill) out.push(lu.bonusSkill);
+      if(lu.milestone.learned && Array.isArray(lu.milestone.learnedSkills)){
+        out.push(...lu.milestone.learnedSkills);
+      }
+      return out;
+    }
+
+    function skillsForPick(){
+      const base = Array.isArray(data.skills) ? data.skills.slice(0) : [];
+      const extra = gatherAllNewSkills();
+      const combined = base.concat(extra);
+      const names = combined.map(s => (s?.name || "").trim()).filter(Boolean);
+      return [...new Set(names)];
+    }
+
+    function computeFeat(){
+      const id = (lu.milestone.featTemplateId || "").trim();
+      if(!id){
+        return { id:"", name:"", desc:"", learned:false, missing:["Feat"] };
+      }
+
+      if(id === "custom"){
+        const name = (lu.milestone.customFeatName || "").trim();
+        const desc = (lu.milestone.customFeatDesc || "").trim();
+        const missing = [];
+        if(!name) missing.push("Feat name");
+        return { id, name, desc, learned:false, missing };
+      }
+
+      const t = getFeatTemplate(id);
+      if(!t){
+        return { id:"", name:"", desc:"", learned:false, missing:["Feat"] };
+      }
+
+      const vars = (lu.milestone.featVars && typeof lu.milestone.featVars === "object") ? lu.milestone.featVars : {};
+      const missing = [];
+      for(const f of (t.fields || [])){
+        const v = String(vars[f.key] ?? "").trim();
+        if(!v) missing.push(f.label);
+      }
+
+      const desc = fillTemplate(t.desc, vars).replace(/\s+/g, " ").trim();
+      return { id:t.id, name:t.name, desc, learned:!!t.learned, missing };
+    }
+
+    function syncFeatDerived(){
+      const feat = computeFeat();
+      lu.milestone.featName = feat.name || "";
+      lu.milestone.featDesc = feat.desc || "";
+      lu.milestone.learned = !!feat.learned;
+      return feat;
+    }
+
+    function setFeatLinePreview(){
+      const feat = syncFeatDerived();
+      const nm = (feat.name||"").trim();
+      const ds = (feat.desc||"").trim();
+      if(!nm) return "";
+      const dash = ds ? ` — ${ds}` : "";
+      return `• [L${toLevel}] Feat: ${nm}${dash}`;
+    }
+
+    function rerender(){
+      const wrap = document.createElement("div");
+      wrap.className = "fields";
+
+      const head = document.createElement("div");
+      head.className = "span12";
+      head.style.color = "var(--muted)";
+      head.style.marginBottom = "6px";
+      head.innerHTML = `<div class="pill">Step ${lu.step+1} / ${steps.length}</div> <span style="margin-left:8px;">${steps[lu.step].title}</span>`;
+      wrap.appendChild(head);
+
+      const body = steps[lu.step].render();
+      wrap.appendChild(body);
+
+      const btnCancel = document.createElement("button");
+      btnCancel.className = "danger";
+      btnCancel.textContent = "Cancel";
+      btnCancel.addEventListener("click", closeModal);
+
+      const btnBack = document.createElement("button");
+      btnBack.textContent = "Back";
+      btnBack.disabled = (lu.step === 0);
+      btnBack.addEventListener("click", ()=>{ lu.step = Math.max(0, lu.step-1); rerender(); });
+
+      const btnNext = document.createElement("button");
+      btnNext.className = "primary";
+      btnNext.textContent = (lu.step === steps.length - 1) ? "Apply" : "Next";
+
+      btnNextRef = btnNext;
+      updateNextDisabled();
+
+      btnNext.addEventListener("click", ()=>{
+        if(lu.step < steps.length - 1){
+          lu.step++;
+          rerender();
+          return;
+        }
+        applyLevelUp();
+      });
+
+      openModal({
+        title: "Level Up",
+        bodyNode: wrap,
+        footerButtons: [btnCancel, btnBack, btnNext]
+      });
+    }
+
+    function canProceedFromStep(stepIdx){
+      const k = steps[stepIdx].key;
+
+      if(k === "alloc"){
+        return (lu.allocG + lu.allocF) === 4;
+      }
+
+      if(k === "bonus"){
+        if(lu.bonusChoice === "grit" || lu.bonusChoice === "focus") return true;
+        if(lu.bonusChoice === "skill") return !!lu.bonusSkill;
+        return false;
+      }
+
+      if(k === "milestone"){
+        if(needsFeat){
+          const feat = syncFeatDerived();
+          if(!feat.name.trim()) return false;
+          if(feat.missing && feat.missing.length) return false;
+          if(feat.learned){
+            return (lu.milestone.learnedSkills.length === 3);
+          }
+        }
+        if(needsStat){
+          const canBody = (data.body ?? 1) < 2;
+          const canMind = (data.mind ?? 1) < 2;
+          if(canBody || canMind){
+            return (lu.milestone.statPick === "body" || lu.milestone.statPick === "mind");
+          }
+        }
+        if(needsMastery){
+          const m = (lu.milestone.masterySkill||"").trim();
+          if(!m) return false;
+        }
+        return true;
+      }
+
+      return true;
+    }
+
+    function renderAlloc(){
+      const box = document.createElement("div");
+      box.className = "field span12";
+
+      const warn = alreadyApplied
+        ? `<div class="pill" style="border-color: rgba(255,92,92,.55); color: var(--text); background: rgba(255,92,92,.10); margin-top:10px;">
+             Warning: Level ${toLevel} was already applied by the wizard. Applying again will stack benefits.
+           </div>`
+        : "";
+
+      box.innerHTML = `
+        <div class="pill">Guided rules wizard</div>
+        <div style="margin-top:8px; color:var(--muted); line-height:1.5;">
+          Levelling from <b style="color:var(--text)">Level ${fromLevel}</b> → <b style="color:var(--text)">Level ${toLevel}</b>.
+        </div>
+        <div style="margin-top:8px; color:var(--muted); line-height:1.5;">
+          Level ups happen during a rest: the wizard will increase max pools and also increase current pools by the same amounts.
+        </div>
+        ${warn}
+
+        <div style="height:12px;"></div>
+
+        <div class="pill">Spend +4 between max Grit and max Focus</div>
+        <div style="height:10px;"></div>
+        <div class="fields">
+          <div class="field span6">
+            <label>+Grit (max)</label>
+            <input id="luAllocG" type="number" min="0" max="4" step="1">
+          </div>
+          <div class="field span6">
+            <label>+Focus (max)</label>
+            <input id="luAllocF" type="number" min="0" max="4" step="1">
+          </div>
+          <div class="field span12">
+            <div class="pill" id="luRemain">Remaining: 4</div>
+            <div class="pill" id="luPreview" style="margin-left:8px;">Preview: —</div>
+          </div>
+        </div>
+      `;
+
+      const g = box.querySelector("#luAllocG");
+      const f = box.querySelector("#luAllocF");
+      const remain = box.querySelector("#luRemain");
+      const preview = box.querySelector("#luPreview");
+
+      g.value = String(lu.allocG);
+      f.value = String(lu.allocF);
+
+      function sync(changed){
+        let gg = clamp(safeInt(g.value,0), 0, 4);
+        let ff = clamp(safeInt(f.value,0), 0, 4);
+        const total = gg + ff;
+
+        if(total > 4){
+          if(changed === "G"){
+            ff = clamp(4 - gg, 0, 4);
+            f.value = String(ff);
+          }else{
+            gg = clamp(4 - ff, 0, 4);
+            g.value = String(gg);
+          }
+        }
+
+        lu.allocG = gg;
+        lu.allocF = ff;
+
+        const rem = 4 - (lu.allocG + lu.allocF);
+        remain.textContent = `Remaining: ${rem}`;
+        preview.textContent = `Preview: Grit max ${data.grit_max + lu.allocG}, Focus max ${data.focus_max + lu.allocF}`;
+
+        updateNextDisabled();
+      }
+
+      g.addEventListener("input", ()=>sync("G"));
+      f.addEventListener("input", ()=>sync("F"));
+      sync("G");
+
+      return box;
+    }
+
+    function renderBonus(){
+      const box = document.createElement("div");
+      box.className = "field span12";
+
+      box.innerHTML = `
+        <div class="pill">Choose one</div>
+        <div style="height:10px;"></div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <label style="display:flex; gap:8px; align-items:center;">
+            <input type="radio" name="luBonus" value="skill" style="width:auto;">
+            Gain 1 new skill
+          </label>
+
+          <label style="display:flex; gap:8px; align-items:center;">
+            <input type="radio" name="luBonus" value="grit" style="width:auto;">
+            +2 to Grit max
+          </label>
+
+          <label style="display:flex; gap:8px; align-items:center;">
+            <input type="radio" name="luBonus" value="focus" style="width:auto;">
+            +2 to Focus max
+          </label>
+        </div>
+
+        <div id="luSkillBlock" style="margin-top:12px; display:none;">
+          <div class="pill">New skill</div>
+          <div style="height:8px;"></div>
+          <div class="row">
+            <button class="primary" id="luAddSkill" type="button">Add / Edit Skill</button>
+            <span class="pill" id="luSkillSummary">None</span>
+          </div>
+        </div>
+      `;
+
+      const radios = [...box.querySelectorAll('input[name="luBonus"]')];
+      const skillBlock = box.querySelector("#luSkillBlock");
+      const skillSummary = box.querySelector("#luSkillSummary");
+      const addSkillBtn = box.querySelector("#luAddSkill");
+
+      function updateSkillSummary(){
+        if(!lu.bonusSkill){
+          skillSummary.textContent = "None";
+          return;
+        }
+        const s = lu.bonusSkill;
+        const tag = (s.tag === "N" ? "N" : "B");
+        const dice = clamp(safeInt(s.dice,1), 1, 6);
+        skillSummary.textContent = `(${tag}) ${s.name} — ${dice}d6${s.defensive?" [DEF]" : ""}`;
+      }
+
+      function setChoice(v){
+        lu.bonusChoice = v;
+        skillBlock.style.display = (v === "skill") ? "" : "none";
+        updateSkillSummary();
+        updateNextDisabled();
+      }
+
+      if(lu.bonusChoice){
+        const r = radios.find(x => x.value === lu.bonusChoice);
+        if(r) r.checked = true;
+      }
+      setChoice(lu.bonusChoice || "");
+
+      radios.forEach(r => {
+        r.addEventListener("change", ()=>{
+          setChoice(r.value);
+          rerender();
+        });
+      });
+
+      addSkillBtn.addEventListener("click", ()=>{
+        openSkillEditor(lu.bonusSkill ? { ...lu.bonusSkill } : null, (created)=>{
+          lu.bonusSkill = created;
+        }, rerender);
+      });
+
+      updateSkillSummary();
+      return box;
+    }
+
+    function renderMilestone(){
+      const box = document.createElement("div");
+      box.className = "field span12";
+      box.style.display = "flex";
+      box.style.flexDirection = "column";
+      box.style.gap = "12px";
+
+      const blocks = [];
+
+      if(needsFeat){
+        const wrap = document.createElement("div");
+        const skillNames = skillsForPick();
+
+        const featOpts = [
+          `<option value="">Select…</option>`,
+          ...FEAT_TEMPLATES.map(f => `<option value="${escapeHtml(f.id)}">${escapeHtml(f.name)}</option>`),
+          `<option value="custom">Custom…</option>`
+        ].join("");
+
+        const dl = `
+          <datalist id="luFeatSkillList">
+            ${skillNames.map(n => `<option value="${escapeHtml(n)}"></option>`).join("")}
+          </datalist>
+        `;
+
+        wrap.innerHTML = `
+          <div class="pill">Feat (Level ${toLevel})</div>
+          <div style="height:8px;"></div>
+
+          <div class="fields">
+            <div class="field span12">
+              <label>Choose a feat</label>
+              <select id="luFeatPick">${featOpts}</select>
+              <div class="pill" id="luFeatHint" style="margin-top:8px;">—</div>
+            </div>
+          </div>
+
+          ${dl}
+
+          <div id="luFeatFieldsWrap" class="fields" style="margin-top:10px; display:none;"></div>
+
+          <div id="luFeatCustomWrap" style="margin-top:10px; display:none;">
+            <div class="fields">
+              <div class="field span12">
+                <label>Custom feat name (required)</label>
+                <input id="luFeatCustomName" type="text" enterkeyhint="done" autocomplete="off">
+              </div>
+              <div class="field span12">
+                <label>Custom feat description (optional)</label>
+                <input id="luFeatCustomDesc" type="text" enterkeyhint="done" autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <div class="pill" id="luFeatPreview" style="margin-top:10px;">Preview: —</div>
+
+          <div id="luLearnedBlock" style="margin-top:10px; display:none;">
+            <div class="pill">Learned skills: <span id="luLearnedCount">0</span> / 3</div>
+            <div style="height:8px;"></div>
+            <div class="row">
+              <button class="primary" id="luAddLearnedSkill" type="button">Add Learned Skill</button>
+              <button id="luClearLearned" type="button">Clear</button>
+            </div>
+            <div class="list" id="luLearnedList" style="margin-top:10px;"></div>
+          </div>
+        `;
+
+        const sel = wrap.querySelector("#luFeatPick");
+        const hint = wrap.querySelector("#luFeatHint");
+        const fieldsWrap = wrap.querySelector("#luFeatFieldsWrap");
+        const customWrap = wrap.querySelector("#luFeatCustomWrap");
+        const cName = wrap.querySelector("#luFeatCustomName");
+        const cDesc = wrap.querySelector("#luFeatCustomDesc");
+        const preview = wrap.querySelector("#luFeatPreview");
+
+        const learnedBlock = wrap.querySelector("#luLearnedBlock");
+        const learnedCount = wrap.querySelector("#luLearnedCount");
+        const learnedList = wrap.querySelector("#luLearnedList");
+        const addLearnedSkill = wrap.querySelector("#luAddLearnedSkill");
+        const clearLearned = wrap.querySelector("#luClearLearned");
+
+        function templateHintText(t){
+          if(!t) return "—";
+          if(!t.desc) return t.name + ": —";
+          let out = t.desc;
+          for(const f of (t.fields||[])){
+            const re = new RegExp("\\{\\{"+f.key+"\\}\\}","g");
+            out = out.replace(re, `[${f.label}]`);
+          }
+          return `${t.name}: ${out}`;
+        }
+
+        function redrawLearned(){
+          learnedList.innerHTML = "";
+          learnedCount.textContent = String(lu.milestone.learnedSkills.length);
+
+          if(lu.milestone.learnedSkills.length === 0){
+            const p = document.createElement("div");
+            p.className = "pill";
+            p.textContent = "No learned skills yet";
+            learnedList.appendChild(p);
+          } else {
+            lu.milestone.learnedSkills.forEach((s, idx)=>{
+              const row = document.createElement("div");
+              row.className = "item";
+
+              const left = document.createElement("div");
+              left.className = "left";
+              left.style.flex="1";
+              left.style.minWidth="0";
+
+              const tag = (s.tag === "N" ? "N" : "B");
+              const dice = clamp(safeInt(s.dice,1), 1, 6);
+              const def = !!s.defensive;
+
+              const title = document.createElement("div");
+              title.className = "name";
+              title.textContent = `(${tag}) ${s.name || "Unnamed"} — ${dice}d6${def ? " [DEF]" : ""}`;
+              left.appendChild(title);
+
+              const btns = document.createElement("div");
+              btns.className = "row";
+
+              const bEdit = document.createElement("button");
+              bEdit.textContent = "Edit";
+              bEdit.addEventListener("click", ()=>{
+                openSkillEditor({ ...s }, (updated)=>{
+                  lu.milestone.learnedSkills[idx] = updated;
+                }, rerender);
+              });
+
+              const bDel = document.createElement("button");
+              bDel.className = "danger";
+              bDel.textContent = "Remove";
+              bDel.addEventListener("click", ()=>{
+                lu.milestone.learnedSkills.splice(idx, 1);
+                rerender();
+              });
+
+              btns.appendChild(bEdit);
+              btns.appendChild(bDel);
+
+              row.appendChild(left);
+              row.appendChild(btns);
+              learnedList.appendChild(row);
+            });
+          }
+        }
+
+        function buildFieldsForTemplate(t){
+          fieldsWrap.innerHTML = "";
+          if(!t || !(t.fields||[]).length){
+            fieldsWrap.style.display = "none";
+            return;
+          }
+          fieldsWrap.style.display = "";
+
+          for(const f of t.fields){
+            const d = document.createElement("div");
+            d.className = "field span6";
+
+            if(f.type === "choice"){
+              const opts = (f.options || []).map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
+              d.innerHTML = `
+                <label>${escapeHtml(f.label)}</label>
+                <select data-key="${escapeHtml(f.key)}">
+                  <option value="">Select…</option>
+                  ${opts}
+                </select>
+              `;
+              const s = d.querySelector("select");
+              s.value = String(lu.milestone.featVars[f.key] ?? "");
+              s.addEventListener("change", ()=>{
+                lu.milestone.featVars[f.key] = s.value;
+                updateFeatUI(false);
+              });
+            }else{
+              const listAttr = (f.type === "skill") ? ` list="luFeatSkillList"` : "";
+              d.innerHTML = `
+                <label>${escapeHtml(f.label)}</label>
+                <input data-key="${escapeHtml(f.key)}" type="text"${listAttr} enterkeyhint="done" autocomplete="off">
+              `;
+              const inp = d.querySelector("input");
+              inp.value = String(lu.milestone.featVars[f.key] ?? "");
+              inp.addEventListener("input", ()=>{
+                lu.milestone.featVars[f.key] = inp.value;
+                updateFeatUI(false);
+              });
+            }
+
+            fieldsWrap.appendChild(d);
+          }
+        }
+
+        function updateFeatUI(skipHintRebuild){
+          const feat = syncFeatDerived();
+
+          learnedBlock.style.display = feat.learned ? "" : "none";
+          customWrap.style.display = (lu.milestone.featTemplateId === "custom") ? "" : "none";
+
+          const line = setFeatLinePreview();
+          preview.textContent = "Preview: " + (line || "—");
+
+          updateNextDisabled();
+
+          if(!skipHintRebuild){
+            if(lu.milestone.featTemplateId === "custom"){
+              hint.textContent = "Custom: type a name and optional description.";
+            }else{
+              const t = getFeatTemplate(lu.milestone.featTemplateId);
+              hint.textContent = templateHintText(t);
+            }
+          }
+        }
+
+        sel.value = lu.milestone.featTemplateId || "";
+        cName.value = lu.milestone.customFeatName || "";
+        cDesc.value = lu.milestone.customFeatDesc || "";
+
+        sel.addEventListener("change", ()=>{
+          lu.milestone.featTemplateId = sel.value || "";
+          if(!lu.milestone.featVars || typeof lu.milestone.featVars !== "object") lu.milestone.featVars = {};
+          rerender();
+        });
+
+        cName.addEventListener("input", ()=>{
+          lu.milestone.customFeatName = cName.value || "";
+          updateFeatUI(true);
+        });
+        cDesc.addEventListener("input", ()=>{
+          lu.milestone.customFeatDesc = cDesc.value || "";
+          updateFeatUI(true);
+        });
+
+        addLearnedSkill.addEventListener("click", ()=>{
+          if(lu.milestone.learnedSkills.length >= 3){
+            toast("Learned needs exactly 3 skills");
+            return;
+          }
+          openSkillEditor(null, (created)=>{
+            lu.milestone.learnedSkills.push(created);
+          }, rerender);
+        });
+
+        clearLearned.addEventListener("click", ()=>{
+          lu.milestone.learnedSkills = [];
+          rerender();
+        });
+
+        if(lu.milestone.featTemplateId && lu.milestone.featTemplateId !== "custom"){
+          const t = getFeatTemplate(lu.milestone.featTemplateId);
+          buildFieldsForTemplate(t);
+          hint.textContent = templateHintText(t);
+        }else if(lu.milestone.featTemplateId === "custom"){
+          hint.textContent = "Custom: type a name and optional description.";
+        }else{
+          hint.textContent = "Select a feat template (or Custom).";
+        }
+
+        updateFeatUI(true);
+        redrawLearned();
+
+        blocks.push(wrap);
+      }
+
+      if(needsStat){
+        const canBody = (data.body ?? 1) < 2;
+        const canMind = (data.mind ?? 1) < 2;
+
+        const wrap = document.createElement("div");
+        wrap.innerHTML = `<div class="pill">Body / Mind +1 (Level 5)</div>`;
+
+        const inner = document.createElement("div");
+        inner.style.marginTop = "8px";
+        inner.style.color = "var(--muted)";
+        inner.style.lineHeight = "1.5";
+
+        if(!canBody && !canMind){
+          inner.innerHTML = `<div>Body and Mind are already at 2. No change needed.</div>`;
+        }else{
+          inner.innerHTML = `
+            <div style="margin-bottom:8px;">Choose one:</div>
+            <label style="display:flex; gap:8px; align-items:center; ${canBody ? "" : "opacity:.5;"}">
+              <input type="radio" name="luStatPick" value="body" style="width:auto;" ${canBody ? "" : "disabled"}>
+              Body +1 (current ${data.body ?? 1})
+            </label>
+            <label style="display:flex; gap:8px; align-items:center; margin-top:8px; ${canMind ? "" : "opacity:.5;"}">
+              <input type="radio" name="luStatPick" value="mind" style="width:auto;" ${canMind ? "" : "disabled"}>
+              Mind +1 (current ${data.mind ?? 1})
+            </label>
+          `;
+
+          const radios = [...inner.querySelectorAll('input[name="luStatPick"]')];
+          radios.forEach(r => {
+            r.checked = (lu.milestone.statPick === r.value);
+            r.addEventListener("change", ()=>{
+              lu.milestone.statPick = r.value;
+              rerender();
+            });
+          });
+        }
+
+        wrap.appendChild(inner);
+        blocks.push(wrap);
+      }
+
+      if(needsThreatAssist){
+        const wrap = document.createElement("div");
+        wrap.style.color = "var(--muted)";
+        wrap.style.lineHeight = "1.5";
+        wrap.innerHTML = `
+          <div class="pill">Level 6</div>
+          <div style="margin-top:8px;">
+            Records the Level 6 rule flag (does not overwrite homebrew if already set).
+          </div>
+        `;
+        blocks.push(wrap);
+      }
+
+      if(needsMastery){
+        const wrap = document.createElement("div");
+        wrap.innerHTML = `
+          <div class="pill">Mastery (Level 10)</div>
+          <div style="height:8px;"></div>
+          <div class="fields">
+            <div class="field span12">
+              <label>Choose a skill to master</label>
+              <select id="luMasterySel"></select>
+              <div class="pill" style="margin-top:8px;">Or type a custom name below</div>
+              <input id="luMasteryCustom" type="text" enterkeyhint="done" autocomplete="off" style="margin-top:8px;">
+              <div class="pill" id="luMasteryHint" style="margin-top:8px;">Chosen skill will be renamed to add “Mastery+”.</div>
+            </div>
+          </div>
+        `;
+
+        const sel = wrap.querySelector("#luMasterySel");
+        const custom = wrap.querySelector("#luMasteryCustom");
+
+        const names = skillsForPick();
+        const opts = ['<option value="">Select…</option>']
+          .concat(names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`))
+          .join("");
+        sel.innerHTML = opts;
+
+        sel.value = names.includes(lu.milestone.masterySkill) ? lu.milestone.masterySkill : "";
+        custom.value = (!sel.value && lu.milestone.masterySkill) ? lu.milestone.masterySkill : "";
+
+        sel.addEventListener("change", ()=>{
+          if(sel.value){
+            lu.milestone.masterySkill = sel.value;
+            custom.value = "";
+          }else{
+            lu.milestone.masterySkill = (custom.value||"").trim();
+          }
+          updateNextDisabled();
+        });
+
+        custom.addEventListener("input", ()=>{
+          const v = (custom.value||"").trim();
+          if(v){
+            sel.value = "";
+            lu.milestone.masterySkill = v;
+          }else{
+            lu.milestone.masterySkill = sel.value || "";
+          }
+          updateNextDisabled();
+        });
+
+        blocks.push(wrap);
+      }
+
+      blocks.forEach(b => box.appendChild(b));
+      return box;
+    }
+
+    function renderDice(){
+      const box = document.createElement("div");
+      box.className = "field span12";
+      box.style.color = "var(--muted)";
+      box.style.lineHeight = "1.5";
+
+      const suggested = toLevel - 1;
+      const current = safeInt(data.dp_max, 0);
+      const applied = Math.max(current, suggested);
+
+      box.innerHTML = `
+        <div class="pill">Recommended Strive Dice max</div>
+        <div style="margin-top:8px;">
+          Rule suggests <b style="color:var(--text)">${suggested}</b> at Level ${toLevel} (Level − 1).
+        </div>
+        <div style="margin-top:8px;">
+          Current: <b style="color:var(--text)">${current}</b> → Wizard will set to: <b style="color:var(--text)">${applied}</b> (never decreases).
+        </div>
+      `;
+      return box;
+    }
+
+    function renderSummary(){
+      const box = document.createElement("div");
+      box.className = "field span12";
+      box.style.color = "var(--muted)";
+      box.style.lineHeight = "1.55";
+
+      const old = {
+        level: data.level,
+        grit_max: data.grit_max,
+        focus_max: data.focus_max,
+        dp_max: data.dp_max,
+        body: data.body,
+        mind: data.mind,
+        grit_cur: data.grit_cur,
+        focus_cur: data.focus_cur,
+        dp_cur: data.dp_cur
+      };
+
+      const dG = lu.allocG + (lu.bonusChoice === "grit" ? 2 : 0);
+      const dF = lu.allocF + (lu.bonusChoice === "focus" ? 2 : 0);
+
+      const newG = old.grit_max + dG;
+      const newF = old.focus_max + dF;
+
+      const suggestedDP = toLevel - 1;
+      const newDP = Math.max(old.dp_max, suggestedDP);
+      const dDP = newDP - old.dp_max;
+
+      let newBody = old.body;
+      let newMind = old.mind;
+      if(needsStat){
+        if(lu.milestone.statPick === "body" && newBody < 2) newBody++;
+        if(lu.milestone.statPick === "mind" && newMind < 2) newMind++;
+      }
+
+      const newSkills = gatherAllNewSkills();
+      const featLine = needsFeat ? setFeatLinePreview() : "";
+      const mRaw = (lu.milestone.masterySkill||"").trim();
+      const mFinal = mRaw ? (mRaw.replace(/\s*Mastery\+\s*$/i,"").trim() + " Mastery+") : "";
+      const masteryLine = needsMastery && mRaw ? `• [L10] Mastery: ${mFinal}` : "";
+
+      const warn = alreadyApplied
+        ? `<div class="pill" style="border-color: rgba(255,92,92,.55); color: var(--text); background: rgba(255,92,92,.10); margin-top:10px;">
+             Warning: applying Level ${toLevel} again will stack benefits.
+           </div>`
+        : "";
+
+      const skillLines = (newSkills.length === 0)
+        ? "• —"
+        : newSkills.map(s => {
+            const tag = (s.tag === "N" ? "N" : "B");
+            const dice = clamp(safeInt(s.dice,1), 1, 6);
+            const def = !!s.defensive;
+            return `• (${tag}) ${s.name} — ${dice}d6${def ? " [DEF]" : ""}`;
+          }).join("\n");
+
+      const featBlock = needsFeat ? (featLine ? featLine : "• —") : "—";
+      const masteryBlock = needsMastery ? (masteryLine ? masteryLine : "• —") : "—";
+
+      box.innerHTML = `
+        <div class="pill">Changes</div>
+        <div style="margin-top:8px;">
+          <div><b style="color:var(--text)">Level</b>: ${old.level} → ${toLevel}</div>
+          <div><b style="color:var(--text)">Grit max</b>: ${old.grit_max} → ${newG}</div>
+          <div><b style="color:var(--text)">Focus max</b>: ${old.focus_max} → ${newF}</div>
+          <div><b style="color:var(--text)">Strive Dice max</b>: ${old.dp_max} → ${newDP}</div>
+          <div><b style="color:var(--text)">Body / Mind</b>: ${old.body} / ${old.mind} → ${newBody} / ${newMind}</div>
+        </div>
+
+        <div style="height:10px;"></div>
+        <div class="pill">Rest refresh (current pools)</div>
+        <div style="margin-top:8px;">
+          <div><b style="color:var(--text)">Grit current</b>: ${old.grit_cur} → ${old.grit_cur + dG}</div>
+          <div><b style="color:var(--text)">Focus current</b>: ${old.focus_cur} → ${old.focus_cur + dF}</div>
+          <div><b style="color:var(--text)">Strive Dice current</b>: ${old.dp_cur} → ${old.dp_cur + dDP}</div>
+        </div>
+
+        <div style="height:10px;"></div>
+        <div class="pill">New skills</div>
+        <pre style="white-space:pre-wrap; margin:8px 0 0; color:var(--muted); font: 700 13px var(--mono);">${escapeHtml(skillLines)}</pre>
+
+        <div style="height:10px;"></div>
+        <div class="pill">Feat</div>
+        <pre style="white-space:pre-wrap; margin:8px 0 0; color:var(--muted); font: 700 13px var(--mono);">${escapeHtml(featBlock)}</pre>
+
+        <div style="height:10px;"></div>
+        <div class="pill">Mastery</div>
+        <pre style="white-space:pre-wrap; margin:8px 0 0; color:var(--muted); font: 700 13px var(--mono);">${escapeHtml(masteryBlock)}</pre>
+
+        ${warn}
+      `;
+      return box;
+    }
+
+    function appendFeatureLine(line){
+      const ln = (line || "").trim();
+      if(!ln) return;
+      const pref = ln.startsWith("•") ? ln : `• ${ln}`;
+      const cur = (data.features_text || "").trim();
+      data.features_text = cur ? (cur + "\n" + pref) : pref;
+    }
+
+    function featuresHasLine(line){
+      const tgt = String(line||"").trim();
+      if(!tgt) return false;
+
+      const bare = tgt.replace(/^•\s*/,"").trim();
+      const lines = String(data.features_text||"")
+        .split(/\r?\n/)
+        .map(l=>l.trim())
+        .filter(Boolean);
+
+      return lines.includes(tgt) || lines.includes("• " + bare) || lines.includes(bare);
+    }
+
+    function applyLevelUp(){
+      // PATCH: level-ups happen during a rest, so increase CURRENT pools by same deltas as max increases.
+      const oldGMax = safeInt(data.grit_max,0);
+      const oldFMax = safeInt(data.focus_max,0);
+      const oldDPMax = safeInt(data.dp_max,0);
+
+      const dG = lu.allocG + (lu.bonusChoice === "grit" ? 2 : 0);
+      const dF = lu.allocF + (lu.bonusChoice === "focus" ? 2 : 0);
+
+      data.level = toLevel;
+
+      data.grit_max = oldGMax + dG;
+      data.focus_max = oldFMax + dF;
+
+      data.grit_cur = safeInt(data.grit_cur,0) + dG;
+      data.focus_cur = safeInt(data.focus_cur,0) + dF;
+
+      if(lu.bonusChoice === "skill" && lu.bonusSkill){
+        data.skills = Array.isArray(data.skills) ? data.skills : [];
+        data.skills.push(lu.bonusSkill);
+      }
+
+      if(needsFeat){
+        const featLine = setFeatLinePreview();
+        if(featLine) appendFeatureLine(featLine);
+
+        if(lu.milestone.learned){
+          data.skills = Array.isArray(data.skills) ? data.skills : [];
+          for(const s of (lu.milestone.learnedSkills || [])){
+            data.skills.push(s);
+          }
+        }
+      }
+
+      if(needsStat){
+        if(lu.milestone.statPick === "body" && (data.body ?? 1) < 2) data.body = (data.body ?? 1) + 1;
+        if(lu.milestone.statPick === "mind" && (data.mind ?? 1) < 2) data.mind = (data.mind ?? 1) + 1;
+      }
+
+      if(needsThreatAssist){
+        if(data.threat_assist_cost === null || typeof data.threat_assist_cost === "undefined"){
+          data.threat_assist_cost = 1;
+        }
+
+        const l6Line = "• This character can apply its successes to additional nearby Threats for 1 Grit/Focus.";
+        if(!featuresHasLine(l6Line)){
+          appendFeatureLine(l6Line);
+        }
+      }
+
+      // Strive dice max: recommended = level - 1, never decrease
+      const suggested = toLevel - 1;
+      data.dp_max = Math.max(oldDPMax, suggested);
+      const dDP = data.dp_max - oldDPMax;
+      data.dp_cur = safeInt(data.dp_cur,0) + dDP;
+
+      // Level 10 mastery: rename chosen skill by appending " Mastery+"
+      if(needsMastery){
+        const raw = (lu.milestone.masterySkill || "").trim();
+        if(raw){
+          const base = raw.replace(/\s*Mastery\+\s*$/i, "").trim();
+          const finalName = base + " Mastery+";
+
+          data.mastery_skill = finalName;
+
+          const skills = Array.isArray(data.skills) ? data.skills : [];
+          let idx = skills.findIndex(s => String(s?.name||"").trim() === raw);
+          if(idx < 0) idx = skills.findIndex(s => String(s?.name||"").trim() === base);
+          if(idx < 0) idx = skills.findIndex(s => String(s?.name||"").trim() === finalName);
+          if(idx >= 0){
+            const curName = String(skills[idx].name||"").trim();
+            const curBase = curName.replace(/\s*Mastery\+\s*$/i, "").trim();
+            skills[idx].name = curBase + " Mastery+";
+          }
+
+          appendFeatureLine(`• [L10] Mastery: ${finalName}`);
+        }
+      }
+
+      // Clamp currents safely (should already be <= new max, but keep robust)
+      data.grit_cur = clamp(safeInt(data.grit_cur,0), 0, data.grit_max);
+      data.focus_cur = clamp(safeInt(data.focus_cur,0), 0, data.focus_max);
+      data.dp_cur = clamp(safeInt(data.dp_cur,0), 0, data.dp_max);
+
+      if(!data.advancement_log || typeof data.advancement_log !== "object") data.advancement_log = { applied_levels: [] };
+      if(!Array.isArray(data.advancement_log.applied_levels)) data.advancement_log.applied_levels = [];
+      if(!data.advancement_log.applied_levels.includes(toLevel)) data.advancement_log.applied_levels.push(toLevel);
+
+      normaliseDerived();
       syncInputsFromData();
       refreshAll();
       saveAutosave();
       closeModal();
-      toast("Level updated");
-    });
+      toast("Level up applied");
+    }
 
-    openModal({ title:"Level Up", bodyNode:wrap, footerButtons:[btnCancel, btnOK] });
+    function escapeHtml(s){
+      return String(s||"")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    rerender();
+  }
+
+  function escapeHtml(s){
+    return String(s||"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
   }
 
   // --- Portrait rendering + interactions
@@ -1993,7 +3011,6 @@
     }
   }
 
-  // Pointer handling (pan + pinch) gated by lock
   const pointers = new Map();
   let pinchStartDist = 0;
   let pinchStartZoom = 1;
@@ -2080,7 +3097,6 @@
     saveAutosave();
   });
 
-  // Wheel zoom (PC) gated by lock
   canvas.addEventListener("wheel", (e)=>{
     if(data.portrait.locked) return;
     e.preventDefault();
@@ -2088,7 +3104,7 @@
     setPortraitZoom(data.portrait.zoom + delta);
   }, {passive:false});
 
-  // --- Card export (Front/Back) 2.5:3.5 with transparent rounded corners
+  // --- Card export helpers
   function roundRectPath(c, x,y,w,h,r){
     const rr = Math.min(r, w/2, h/2);
     c.beginPath();
@@ -2109,14 +3125,8 @@
     c.clearRect(0,0,W,H);
     c.save();
 
-    // Border thickness (keep your doubled intent)
     const borderW = 30 * s;
-
-    // FIX: corner radius MUST be > borderW, otherwise the inner cutout radius becomes 0 (square corners).
-    // Keep at least ~18*s of inner rounding so the inside edge stays curved.
     const cornerR = Math.max(46 * s, borderW + (18 * s));
-
-    // Slightly rounder mask than border path to avoid corner pixels peeking outside.
     const maskCornerR = cornerR + (1 * s);
 
     roundRectPath(c, 0,0,W,H, maskCornerR);
@@ -2136,11 +3146,9 @@
 
     c.restore();
 
-    // --- Border as an INSIDE ring (outer minus inner) using even-odd fill
     const inset = Math.min(borderW, (Math.min(W,H) / 2) - 1);
     const innerR = Math.max(1, cornerR - inset);
 
-    // Local helper: append a round-rect subpath WITHOUT resetting the path
     function addRoundRectSubpath(ctx2, x, y, w, h, r){
       const rr = Math.min(r, w/2, h/2);
       ctx2.moveTo(x+rr, y);
@@ -2159,7 +3167,6 @@
     c.fill("evenodd");
     c.restore();
 
-    // Thin highlight stroke, inset so it stays fully inside
     c.save();
     const hiInset = inset * 0.5;
     const hiR = Math.max(1, cornerR - hiInset);
@@ -2255,7 +3262,7 @@
     c.clip();
 
     const pad = 26 * scale;
-    let tx = x + pad;
+    const tx = x + pad;
     let ty = y + pad;
     const tw = w - pad*2;
 
@@ -2273,15 +3280,15 @@
 
     const lines = block.split("\n");
     const lh = 44 * scale;
-    let yCursor = ty;
+
     for(const ln of lines){
       if(!ln.trim()){
-        yCursor += lh * 0.6;
+        ty += lh * 0.6;
         continue;
       }
-      const used = wrapText(c, ln, tx, yCursor, tw, lh, Math.floor((y+h - yCursor - pad)/lh));
-      yCursor += lh * used;
-      if(yCursor > y + h - pad) break;
+      const used = wrapText(c, ln, tx, ty, tw, lh, Math.floor((y+h - ty - pad)/lh));
+      ty += lh * used;
+      if(ty > y + h - pad) break;
     }
 
     c.restore();
@@ -2296,7 +3303,6 @@
     a.remove();
   }
 
-  // Guardrail: force-lock portrait while exporting (prevents mid-gesture drift)
   function exportCardPNGs(){
     const name = safeFileName(data.name);
 
@@ -2307,13 +3313,13 @@
     dragStart = null;
     pinchStartDist = 0;
 
-    const W = EXPORT_CARD_W, H = EXPORT_CARD_H; // requested export size
+    const W = EXPORT_CARD_W, H = EXPORT_CARD_H;
     const refW = 1000, refH = 1400;
     const sx = W / refW;
     const sy = H / refH;
     const s = Math.min(sx, sy);
 
-    const circleAlpha = 0.55; // match text box opacity
+    const circleAlpha = 0.55;
 
     // FRONT
     const front = document.createElement("canvas");
@@ -2321,21 +3327,23 @@
     const cf = front.getContext("2d");
     drawCardBase(cf, W, H);
 
-    // Circles: red left, blue right (alpha matches text boxes)
     const cx = 140 * sx;
     const cy = 140 * sy;
     const r  = 90  * s;
-    drawCircleStat(cf, cx, cy, r, data.grit_max ?? 0, `rgba(255,0,0,${circleAlpha})`);
-    drawCircleStat(cf, W - cx, cy, r, data.focus_max ?? 0, `rgba(0,0,255,${circleAlpha})`);
 
-    // Name box (font +30%)
-    const nameX = 80 * sx;
-    const nameY = H - (250 * sy);
-    const nameW = W - (160 * sx);
-    const nameH = 190 * sy;
-    const nameFont = Math.round(64 * 1.3 * s);
-    drawTextBox(cf, nameX, nameY, nameW, nameH, (data.name||"").trim() || "—", nameFont, "center");
-    downloadPng(front, `${name}_F.png`);
+    drawCircleStat(cf, cx, cy, r, data.grit_max ?? 0, `rgba(255,0,0,${circleAlpha})`);
+    drawCircleStat(cf, W - cx, cy, r, data.focus_max ?? 0, `rgba(0,120,255,${circleAlpha})`);
+
+    const nm = (data.name || "—").trim() || "—";
+    const nameBoxW = 760 * sx;
+    const nameBoxH = 120 * sy;
+    const nameBoxX = (W - nameBoxW) / 2;
+    const nameBoxY = H - (190 * sy);
+    const nameFont = Math.round(64 * s);
+    drawTextBox(cf, nameBoxX, nameBoxY, nameBoxW, nameBoxH, nm, nameFont, "center");
+
+    const lvl = `Level ${safeInt(data.level,1)}`;
+    drawTextBox(cf, nameBoxX, nameBoxY + (140*sy), nameBoxW, 90*sy, lvl, Math.round(46*s), "center");
 
     // BACK
     const back = document.createElement("canvas");
@@ -2343,56 +3351,31 @@
     const cb = back.getContext("2d");
     drawCardBase(cb, W, H);
 
-    // FIX: show Xd6 / Yd6 on Card B
-    drawCircleStat(cb, cx, cy, r, `${data.body ?? 1}d6`, `rgba(255,0,0,${circleAlpha})`);
-    drawCircleStat(cb, W - cx, cy, r, `${data.mind ?? 1}d6`, `rgba(0,0,255,${circleAlpha})`);
+    const boxX = 90 * sx;
+    const boxY = 120 * sy;
+    const boxW = W - boxX*2;
+    const boxH = H - boxY*2;
+    drawBackTextBox(cb, boxX, boxY, boxW, boxH, s);
 
-    const backX = 80 * sx;
-    const backY = 320 * sy;
-    const backW = W - (160 * sx);
-    const backH = H - (400 * sy);
-    drawBackTextBox(cb, backX, backY, backW, backH, s);
+    downloadPng(front, `${name}_F.png`);
     downloadPng(back, `${name}_B.png`);
 
-    // Restore lock state
     data.portrait.locked = prevLocked;
     updatePortraitLockUI();
-
-    toast("Exported card PNGs");
+    saveAutosave();
+    toast("Exported cards");
   }
 
   // --- Init
-  function init(){
-    const isMobile = window.matchMedia && window.matchMedia("(max-width: 980px)").matches;
-
-    loadAutosave();
-    normaliseDerived();
-
-    // default: portrait locked on mobile if no autosave state existed
-    if(data.portrait && typeof data.portrait.locked === "boolean"){
-      // keep autosave lock state
-    } else {
-      data.portrait.locked = !!isMobile;
-    }
-
-    syncInputsFromData();
-    refreshAll();
-
-    if(data.portrait.dataUrl) loadPortraitFromDataUrl(data.portrait.dataUrl);
-    updatePortraitLockUI();
-    renderPortrait();
-
-    // collapse defaults
-    $("detailsCheck").open = false;
-    $("detailsDamage").open = false;
-    $("detailsQuickRef").open = false;
-
-    saveAutosave();
-  }
-
+  loadAutosave();
+  normaliseDerived();
   bindInputs();
-  init();
-
+  syncInputsFromData();
+  refreshAll();
+  loadPortraitFromDataUrl(data.portrait.dataUrl);
+  renderPortrait();
+  setTab("character");
+  saveAutosave();
 })();
 </script>
 </body>

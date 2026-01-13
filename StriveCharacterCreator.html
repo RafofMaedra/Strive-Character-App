@@ -3002,6 +3002,19 @@
     ctx.strokeStyle = "rgba(255,255,255,0.16)";
     ctx.lineWidth = 2;
     ctx.strokeRect(1,1,canvas.width-2,canvas.height-2);
+
+    // Token positioning guide circle (30% opacity, preview only)
+    // Circle spans from 13.5% to 55% of height, centered horizontally
+    const guideRadius = canvas.height * 0.2075;  // (55% - 13.5%) / 2
+    const guideCenterX = canvas.width / 2;
+    const guideCenterY = canvas.height * 0.3425; // 13.5% + 20.75%
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(guideCenterX, guideCenterY, guideRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
   }
 
   function blurActiveInput(){
@@ -3375,6 +3388,9 @@
     // show Xd6 / Yd6 on Card B
     drawCircleStat(cb, cx,     cy, r, `${data.body ?? 1}d6`, `rgba(255,0,0,${circleAlpha})`);
     drawCircleStat(cb, W - cx, cy, r, `${data.mind ?? 1}d6`, `rgba(0,0,255,${circleAlpha})`);
+
+    // Strive dice max circle (black, centered at top)
+    drawCircleStat(cb, W / 2, cy, r, data.dp_max ?? 0, `rgba(0,0,0,${circleAlpha})`);
 
     const backX = 80 * sx;
     const backY = 320 * sy;

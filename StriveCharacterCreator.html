@@ -1079,8 +1079,10 @@
   const modalTitle = $("modalTitle");
   const modalBody = $("modalBody");
   const modalFooter = $("modalFooter");
+  let modalPreventBackdropClose = false;
 
-  function openModal({title, bodyNode, footerButtons=[]}){
+  function openModal({title, bodyNode, footerButtons=[], preventBackdropClose=false}){
+    modalPreventBackdropClose = preventBackdropClose;
     modalTitle.textContent = title || "Menu";
     modalBody.innerHTML = "";
     if(bodyNode) modalBody.appendChild(bodyNode);
@@ -1090,13 +1092,14 @@
     document.body.style.overflow = "hidden";
   }
   function closeModal(){
+    modalPreventBackdropClose = false;
     modalBackdrop.style.display = "none";
     document.body.style.overflow = "";
     modalBody.innerHTML = "";
     modalFooter.innerHTML = "";
   }
-  $("btnModalClose").addEventListener("click", closeModal);
-  modalBackdrop.addEventListener("click", (e)=>{ if(e.target === modalBackdrop) closeModal(); });
+  $("btnModalClose").addEventListener("click", ()=>{ if(!modalPreventBackdropClose) closeModal(); });
+  modalBackdrop.addEventListener("click", (e)=>{ if(e.target === modalBackdrop && !modalPreventBackdropClose) closeModal(); });
 
   function openMobileMenu(){
     const wrap = document.createElement("div");
@@ -1419,7 +1422,8 @@
       openModal({
         title: "New (Guided Creation)",
         bodyNode: wrap,
-        footerButtons: [btnCancel, btnBack, btnNext]
+        footerButtons: [btnCancel, btnBack, btnNext],
+        preventBackdropClose: true
       });
     }
 
@@ -2079,7 +2083,8 @@
       openModal({
         title: "Level Up",
         bodyNode: wrap,
-        footerButtons: [btnCancel, btnBack, btnNext]
+        footerButtons: [btnCancel, btnBack, btnNext],
+        preventBackdropClose: true
       });
     }
 

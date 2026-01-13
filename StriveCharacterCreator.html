@@ -2138,7 +2138,7 @@
           Levelling from <b style="color:var(--text)">Level ${fromLevel}</b> → <b style="color:var(--text)">Level ${toLevel}</b>.
         </div>
         <div style="margin-top:8px; color:var(--muted); line-height:1.5;">
-          Level ups happen during a rest: the wizard will increase max pools and also increase current pools by the same amounts.
+          
         </div>
         ${warn}
 
@@ -2596,7 +2596,7 @@
         wrap.innerHTML = `
           <div class="pill">Level 6</div>
           <div style="margin-top:8px;">
-            Records the Level 6 rule flag (does not overwrite homebrew if already set).
+            This character can now apply successes to additional nearby Threats for 1 Grit/Focus, instead of 2.
           </div>
         `;
         blocks.push(wrap);
@@ -2674,7 +2674,7 @@
           Rule suggests <b style="color:var(--text)">${suggested}</b> at Level ${toLevel} (Level − 1).
         </div>
         <div style="margin-top:8px;">
-          Current: <b style="color:var(--text)">${current}</b> → Wizard will set to: <b style="color:var(--text)">${applied}</b> (never decreases).
+          Current: <b style="color:var(--text)">${current}</b> → will set to: <b style="color:var(--text)">${applied}</b>.
         </div>
       `;
       return box;

@@ -750,13 +750,13 @@
   function getAdaptiveTextStyle(text, baseFontSize) {
     const len = (text || "").length;
 
-    // Letter spacing: 0 for ≤9 chars, decrease by 0.6px per char over 9
-    const letterSpacing = len <= 9 ? 0 : -0.6 * (len - 9);
+    // Letter spacing: 0 for ≤9 chars, decrease by 0.3px per char over 9
+    const letterSpacing = len <= 9 ? 0 : -0.3 * (len - 9);
 
-    // Font size: 100% for ≤9 chars, decrease by 4% per char over 9
+    // Font size: 100% for ≤9 chars, decrease by 3% per char over 9
     let fontSize = baseFontSize;
     if (len > 9) {
-      const reduction = 0.04 * (len - 9);
+      const reduction = 0.03 * (len - 9);
       fontSize = baseFontSize * Math.max(0.56, 1 - reduction); // Floor at 56%
     }
 

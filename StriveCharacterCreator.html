@@ -517,7 +517,11 @@
 
             <div class="vItem">
               <div class="vLabel">Strive Dice</div>
-              <div class="vValue" id="vDice">0 / 0</div>
+              <div class="vAdjust">
+                <button class="iconTiny" id="btnDiceMinus" type="button" title="Strive Dice -1">−</button>
+                <div class="vValue" id="vDice">0 / 0</div>
+                <button class="iconTiny" id="btnDicePlus" type="button" title="Strive Dice +1">+</button>
+              </div>
             </div>
           </div>
         </div>
@@ -866,6 +870,8 @@
     $("btnGritPlus").addEventListener("click", ()=>{ data.grit_cur = clamp(data.grit_cur+1, 0, data.grit_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
     $("btnFocusMinus").addEventListener("click", ()=>{ data.focus_cur = clamp(data.focus_cur-1, 0, data.focus_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
     $("btnFocusPlus").addEventListener("click", ()=>{ data.focus_cur = clamp(data.focus_cur+1, 0, data.focus_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
+    $("btnDiceMinus").addEventListener("click", ()=>{ data.dp_cur = clamp(data.dp_cur-1, 0, data.dp_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
+    $("btnDicePlus").addEventListener("click", ()=>{ data.dp_cur = clamp(data.dp_cur+1, 0, data.dp_max); syncCoreNumbers(); refreshAll(); saveAutosave(); });
 
     $("newMenu").addEventListener("change", () => {
       const v = $("newMenu").value;

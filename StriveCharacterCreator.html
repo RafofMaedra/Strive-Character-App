@@ -3026,15 +3026,15 @@
     ctx.lineWidth = 2;
     ctx.strokeRect(1,1,canvas.width-2,canvas.height-2);
 
-    // Token positioning guide circle (30% opacity, preview only)
-    // Circle spans from 13.5% to 55% of height, centered horizontally
-    const guideRadius = canvas.height * 0.2075;  // (55% - 13.5%) / 2
+    // Token positioning guide circle (20% opacity, preview only)
+    // Circle spans from 13.5% to 55% of height, centered horizontally (reduced by 10%)
+    const guideRadius = canvas.height * 0.18675;  // (55% - 13.5%) / 2 * 0.9
     const guideCenterX = canvas.width / 2;
     const guideCenterY = canvas.height * 0.3425; // 13.5% + 20.75%
     ctx.save();
     ctx.beginPath();
     ctx.arc(guideCenterX, guideCenterY, guideRadius, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    ctx.strokeStyle = "rgba(255,255,255,0.20)";
     ctx.lineWidth = 3;
     ctx.stroke();
     ctx.restore();
@@ -3056,7 +3056,7 @@
 
     // Name box at TOP, between circles
     const gap = 16 * s;  // ~15px gap
-    const nameH = 140 * s;  // ~130px height
+    const nameH = 129 * s;  // ~120px height
     const nameX = cx + r + gap;
     const nameY = cy - (nameH / 2);
     const nameW = W - (2 * nameX);
@@ -3425,7 +3425,7 @@
 
     // Name box at TOP, between circles (font +30% base, with adaptive sizing)
     const gap = 16 * s;  // ~15px gap between circles and name box
-    const nameH = 140 * s;  // ~130px height
+    const nameH = 129 * s;  // ~120px height
     const nameX = cx + r + gap;  // After left circle + gap
     const nameY = cy - (nameH / 2);  // Vertically centered with circles
     const nameW = W - (2 * nameX);  // Symmetric width between circles

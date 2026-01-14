@@ -750,13 +750,13 @@
   function getAdaptiveTextStyle(text, baseFontSize) {
     const len = (text || "").length;
 
-    // Letter spacing: 0 for ≤10 chars, decrease by 0.3px per char over 10
-    const letterSpacing = len <= 10 ? 0 : -0.3 * (len - 10);
+    // Letter spacing: 0 for ≤9 chars, decrease by 0.6px per char over 9
+    const letterSpacing = len <= 9 ? 0 : -0.6 * (len - 9);
 
-    // Font size: 100% for ≤14 chars, decrease by 4% per char over 14
+    // Font size: 100% for ≤9 chars, decrease by 4% per char over 9
     let fontSize = baseFontSize;
-    if (len > 14) {
-      const reduction = 0.04 * (len - 14);
+    if (len > 9) {
+      const reduction = 0.04 * (len - 9);
       fontSize = baseFontSize * Math.max(0.56, 1 - reduction); // Floor at 56%
     }
 
@@ -3055,8 +3055,8 @@
     drawCircleStat(ctx, W - cx, cy, r, data.focus_max ?? 0, `rgba(0,0,255,${circleAlpha})`);
 
     // Name box at TOP, between circles
-    const gap = 11 * s;
-    const nameH = 180 * s;
+    const gap = 16 * s;  // ~15px gap
+    const nameH = 140 * s;  // ~130px height
     const nameX = cx + r + gap;
     const nameY = cy - (nameH / 2);
     const nameW = W - (2 * nameX);
@@ -3424,8 +3424,8 @@
     drawCircleStat(cf, W - cx, cy, r, data.focus_max ?? 0, `rgba(0,0,255,${circleAlpha})`);
 
     // Name box at TOP, between circles (font +30% base, with adaptive sizing)
-    const gap = 11 * s;  // ~10px gap between circles and name box
-    const nameH = 180 * s;  // ~167px, matches circle diameter
+    const gap = 16 * s;  // ~15px gap between circles and name box
+    const nameH = 140 * s;  // ~130px height
     const nameX = cx + r + gap;  // After left circle + gap
     const nameY = cy - (nameH / 2);  // Vertically centered with circles
     const nameW = W - (2 * nameX);  // Symmetric width between circles

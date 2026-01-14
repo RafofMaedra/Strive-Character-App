@@ -746,6 +746,23 @@
   const EXPORT_CARD_W = 928;
   const EXPORT_CARD_H = 1312;
 
+  // Adaptive text styling for name box based on character count
+  function getAdaptiveTextStyle(text, baseFontSize) {
+    const len = (text || "").length;
+
+    // Letter spacing: 0 for ≤9 chars, decrease by 0.3px per char over 9
+    const letterSpacing = len <= 9 ? 0 : -0.3 * (len - 9);
+
+    // Font size: 100% for ≤9 chars, decrease by 3% per char over 9
+    let fontSize = baseFontSize;
+    if (len > 9) {
+      const reduction = 0.03 * (len - 9);
+      fontSize = baseFontSize * Math.max(0.56, 1 - reduction); // Floor at 56%
+    }
+
+    return { fontSize: Math.round(fontSize), letterSpacing };
+  }
+
   const data = {
     name: "",
     level: 1,
@@ -1063,6 +1080,7 @@
     refreshSkills();
     refreshSuccessThreshold();
     if($("detailsBig").value !== data.details) $("detailsBig").value = data.details || "";
+    renderPortrait();  // Update front card preview
   }
 
   function setTab(name){
@@ -3008,18 +3026,44 @@
     ctx.lineWidth = 2;
     ctx.strokeRect(1,1,canvas.width-2,canvas.height-2);
 
-    // Token positioning guide circle (30% opacity, preview only)
-    // Circle spans from 13.5% to 55% of height, centered horizontally
-    const guideRadius = canvas.height * 0.2075;  // (55% - 13.5%) / 2
+    // Token positioning guide circle (20% opacity, preview only)
+    // Circle spans from 13.5% to 55% of height, centered horizontally (reduced by 10%)
+    const guideRadius = canvas.height * 0.18675;  // (55% - 13.5%) / 2 * 0.9
     const guideCenterX = canvas.width / 2;
     const guideCenterY = canvas.height * 0.3425; // 13.5% + 20.75%
     ctx.save();
     ctx.beginPath();
     ctx.arc(guideCenterX, guideCenterY, guideRadius, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.30)";
+    ctx.strokeStyle = "rgba(255,255,255,0.20)";
     ctx.lineWidth = 3;
     ctx.stroke();
     ctx.restore();
+
+    // Front card preview: stat circles and name box
+    const W = canvas.width, H = canvas.height;
+    const refW = 1000, refH = 1400;
+    const sx = W / refW;
+    const sy = H / refH;
+    const s = Math.min(sx, sy);
+    const circleAlpha = 0.55;
+
+    // Stat circles
+    const cx = 140 * sx;
+    const cy = 140 * sy;
+    const r = 90 * s;
+    drawCircleStat(ctx, cx, cy, r, data.grit_max ?? 0, `rgba(255,0,0,${circleAlpha})`);
+    drawCircleStat(ctx, W - cx, cy, r, data.focus_max ?? 0, `rgba(0,0,255,${circleAlpha})`);
+
+    // Name box at TOP, between circles
+    const gap = 16 * s;  // ~15px gap
+    const nameH = 129 * s;  // ~120px height
+    const nameX = cx + r + gap;
+    const nameY = cy - (nameH / 2);
+    const nameW = W - (2 * nameX);
+    const nameText = (data.name || "").trim() || "—";
+    const baseFontSize = Math.round(64 * 1.3 * s);
+    const { fontSize: nameFont, letterSpacing } = getAdaptiveTextStyle(nameText, baseFontSize);
+    drawTextBox(ctx, nameX, nameY, nameW, nameH, nameText, nameFont, "center", letterSpacing);
   }
 
   function blurActiveInput(){
@@ -3232,7 +3276,7 @@
     c.restore();
   }
 
-  function drawTextBox(c, x,y,w,h, text, fontPx, align="center"){
+  function drawTextBox(c, x,y,w,h, text, fontPx, align="center", letterSpacing=0){
     c.save();
     roundRectPath(c, x,y,w,h, 34);
     c.fillStyle = "rgba(0,0,0,0.55)";
@@ -3251,6 +3295,12 @@
     c.font = `900 ${fontPx}px ${FONT_SERIF}`;
     c.textAlign = align;
     c.textBaseline = "middle";
+
+    // Apply letter spacing if supported
+    if (letterSpacing !== 0 && typeof c.letterSpacing !== 'undefined') {
+      c.letterSpacing = `${letterSpacing}px`;
+    }
+
     const tx = x + (align==="center" ? w/2 : 18);
     const ty = y + h/2;
 
@@ -3373,13 +3423,16 @@
     drawCircleStat(cf, cx,     cy, r, data.grit_max  ?? 0, `rgba(255,0,0,${circleAlpha})`);
     drawCircleStat(cf, W - cx, cy, r, data.focus_max ?? 0, `rgba(0,0,255,${circleAlpha})`);
 
-    // Name box (font +30%)
-    const nameX = 80 * sx;
-    const nameY = H - (250 * sy);
-    const nameW = W - (160 * sx);
-    const nameH = 190 * sy;
-    const nameFont = Math.round(64 * 1.3 * s);
-    drawTextBox(cf, nameX, nameY, nameW, nameH, (data.name || "").trim() || "—", nameFont, "center");
+    // Name box at TOP, between circles (font +30% base, with adaptive sizing)
+    const gap = 16 * s;  // ~15px gap between circles and name box
+    const nameH = 129 * s;  // ~120px height
+    const nameX = cx + r + gap;  // After left circle + gap
+    const nameY = cy - (nameH / 2);  // Vertically centered with circles
+    const nameW = W - (2 * nameX);  // Symmetric width between circles
+    const nameText = (data.name || "").trim() || "—";
+    const baseFontSize = Math.round(64 * 1.3 * s);
+    const { fontSize: nameFont, letterSpacing } = getAdaptiveTextStyle(nameText, baseFontSize);
+    drawTextBox(cf, nameX, nameY, nameW, nameH, nameText, nameFont, "center", letterSpacing);
 
     downloadPng(front, `${name}_F.png`);
 

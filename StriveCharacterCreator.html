@@ -1339,6 +1339,10 @@
       { title:"Starting Skills", render: renderStepSkills }
     ];
 
+    function countTraitLines(text){
+      return (text || "").split(/[\n,]+/).map(s=>s.trim()).filter(Boolean).length;
+    }
+
     function speciesMeta(){
       if(state.species === "Human") return { bg:1, bf:1, extraSkill:1, traits:[] };
       if(state.species === "Dwarf") return { bg:2, bf:0, extraSkill:0, traits:["Lowlight Vision"] };
@@ -1347,13 +1351,10 @@
       if(state.species === "Custom"){
         const bg = clamp(safeInt(state.customBonusGrit,0), 0, 3);
         const bf = clamp(safeInt(state.customBonusFocus,0), 0, 3);
-        const used = bg + bf;
-        const traitPoints = clamp(3 - used, 0, 3);
         const typed = (state.customTraitsText||"")
           .split(/[\n,]+/)
           .map(s=>s.trim())
-          .filter(Boolean)
-          .slice(0, traitPoints);
+          .filter(Boolean);
         return { bg, bf, extraSkill:0, traits: typed };
       }
       return { bg:0, bf:0, extraSkill:0, traits:[] };
@@ -1402,6 +1403,15 @@
       btnNext.textContent = (state.step === steps.length-1) ? "Apply" : "Next";
       btnNext.addEventListener("click", ()=>{
         if(state.step === 0 && !state.name.trim()){ toast("Name required"); return; }
+        if(state.step === 1 && state.species === "Custom"){
+          const bg = clamp(safeInt(state.customBonusGrit,0), 0, 3);
+          const bf = clamp(safeInt(state.customBonusFocus,0), 0, 3);
+          const traitCount = countTraitLines(state.customTraitsText);
+          if(bg + bf + traitCount > 3){
+            toast("Grit + Focus + Traits exceed 3 points total");
+            return;
+          }
+        }
         if(state.step < steps.length-1){
           state.step++;
           rerender();
@@ -1486,9 +1496,9 @@
               <input id="cFocus" type="number" min="0" max="3" step="1">
             </div>
             <div class="field span12">
-              <label>Traits (up to remaining points)</label>
+              <label>Traits (one per line)</label>
               <textarea id="cTraits" class="mono" style="min-height:90px;" placeholder="Lowlight Vision&#10;Underwater Adaptions"></textarea>
-              <div class="pill" id="cRemain" style="margin-top:8px;">Traits points: 3</div>
+              <div class="pill" id="cRemain" style="margin-top:8px;">Points: 0/3</div>
               <div class="pill" style="margin-top:8px;">Examples: ${TRAIT_EXAMPLES.join(", ")}</div>
             </div>
           </div>
@@ -1518,25 +1528,20 @@
         else if(state.species === "Elf") info.textContent = "Elf: +3 Focus.";
         else if(state.species === "Seafolk") info.textContent = "Seafolk: +1 Grit, +1 Focus, Trait: Underwater Adaptions.";
         else if(state.species === "Custom"){
-          const used = sm.bg + sm.bf;
-          const traitPts = clamp(3 - used, 0, 3);
-          info.textContent = `Custom: +${sm.bg} Grit, +${sm.bf} Focus, ${traitPts} trait point(s).`;
-          cR.textContent = `Traits points: ${traitPts}`;
+          const bg = clamp(safeInt(state.customBonusGrit,0), 0, 3);
+          const bf = clamp(safeInt(state.customBonusFocus,0), 0, 3);
+          const traitCount = countTraitLines(state.customTraitsText);
+          const totalUsed = bg + bf + traitCount;
+          const overBudget = totalUsed > 3;
+          info.textContent = `Custom: +${bg} Grit, +${bf} Focus, ${traitCount} trait(s).`;
+          cR.textContent = `Points: ${totalUsed}/3 (Grit:${bg} + Focus:${bf} + Traits:${traitCount})`;
+          cR.style.color = overBudget ? "var(--danger)" : "";
         } else info.textContent = "";
       }
 
       function enforceCustomSum(changed){
         let bg = clamp(safeInt(cG.value,0), 0, 3);
         let bf = clamp(safeInt(cF.value,0), 0, 3);
-        if(bg + bf > 3){
-          if(changed === "G"){
-            bf = Math.max(0, 3 - bg);
-            cF.value = String(bf);
-          }else{
-            bg = Math.max(0, 3 - bf);
-            cG.value = String(bg);
-          }
-        }
         state.customBonusGrit = bg;
         state.customBonusFocus = bf;
         state.customTraitsText = cT.value || "";

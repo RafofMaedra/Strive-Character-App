@@ -1104,6 +1104,7 @@
   const modalBody = $("modalBody");
   const modalFooter = $("modalFooter");
   let modalPreventBackdropClose = false;
+  let modalMouseDownOnBackdrop = false;
 
   function openModal({title, bodyNode, footerButtons=[], preventBackdropClose=false}){
     modalPreventBackdropClose = preventBackdropClose;
@@ -1123,7 +1124,8 @@
     modalFooter.innerHTML = "";
   }
   $("btnModalClose").addEventListener("click", ()=>{ if(!modalPreventBackdropClose) closeModal(); });
-  modalBackdrop.addEventListener("click", (e)=>{ if(e.target === modalBackdrop && !modalPreventBackdropClose) closeModal(); });
+  modalBackdrop.addEventListener("mousedown", (e)=>{ modalMouseDownOnBackdrop = (e.target === modalBackdrop); });
+  modalBackdrop.addEventListener("click", (e)=>{ if(e.target === modalBackdrop && modalMouseDownOnBackdrop && !modalPreventBackdropClose) closeModal(); });
 
   function openMobileMenu(){
     const wrap = document.createElement("div");

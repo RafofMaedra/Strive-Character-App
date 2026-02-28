@@ -697,10 +697,11 @@
             <b style="color:var(--text)">(N)</b> Narrow.
           </p>
           <p>
-            Card Export creates two PNG files:
-            <b style="color:var(--text)">CHARACTERNAME_F.png</b> and
-            <b style="color:var(--text)">CHARACTERNAME_B.png</b>
-            using a 2.5:3.5 layout and transparent rounded corners.
+            Card Export creates three PNG files:
+            <b style="color:var(--text)">CHARACTERNAME_A_Lvl_X.png</b>,
+            <b style="color:var(--text)">CHARACTERNAME_B_Lvl_X.png</b>, and
+            <b style="color:var(--text)">CHARACTERNAME_Token_Lvl_X.png</b>
+            using a 2.5:3.5 layout with transparent rounded corners (cards) and a circular transparent token.
           </p>
           <p>
             Species traits (examples): Lowlight Vision, Underwater Adaptions, Heat Resistance.
@@ -3394,6 +3395,8 @@
 
   function exportCardPNGs(){
     const name = safeFileName(data.name);
+    const level = clamp(safeInt(data.level, 1), 1, 12);
+    const fileStem = `Lvl_${level}`;
 
     // Guardrail: force-lock portrait while exporting (prevents mid-gesture drift)
     const prevLocked = data.portrait.locked;
@@ -3439,7 +3442,7 @@
     const { fontSize: nameFont, letterSpacing } = getAdaptiveTextStyle(nameText, baseFontSize);
     drawTextBox(cf, nameX, nameY, nameW, nameH, nameText, nameFont, "center", letterSpacing);
 
-    downloadPng(front, `${name}_F.png`);
+    downloadPng(front, `${name}_A_${fileStem}.png`);
 
     // ---------- BACK ----------
     const back = document.createElement("canvas");
@@ -3461,12 +3464,44 @@
     const backH = H - (400 * sy);
     drawBackTextBox(cb, backX, backY, backW, backH, data, s);
 
-    downloadPng(back, `${name}_B.png`);
+    downloadPng(back, `${name}_B_${fileStem}.png`);
+
+    // ---------- TOKEN ----------
+    const tokenGuideRadiusRatio = 0.18675;
+    const tokenGuideCenterYRatio = 0.3425;
+
+    const tokenRadius = H * tokenGuideRadiusRatio;
+    const tokenDiameter = Math.max(1, Math.round(tokenRadius * 2));
+    const tokenCenterX = W / 2;
+    const tokenCenterY = H * tokenGuideCenterYRatio;
+
+    const token = document.createElement("canvas");
+    token.width = tokenDiameter;
+    token.height = tokenDiameter;
+    const ct = token.getContext("2d");
+
+    // Fill the token from the same portrait transform as preview/export cards.
+    ct.save();
+    ct.beginPath();
+    ct.arc(tokenDiameter / 2, tokenDiameter / 2, tokenDiameter / 2, 0, Math.PI * 2);
+    ct.clip();
+    drawCoverImage(
+      ct,
+      tokenDiameter,
+      tokenDiameter,
+      portraitImg,
+      data.portrait.zoom,
+      data.portrait.offX + (tokenDiameter / 2 - tokenCenterX),
+      data.portrait.offY + (tokenDiameter / 2 - tokenCenterY)
+    );
+    ct.restore();
+
+    downloadPng(token, `${name}_Token_${fileStem}.png`);
 
     // Restore lock state
     data.portrait.locked = prevLocked;
     updatePortraitLockUI();
-    toast("Exported card PNGs");
+    toast("Exported card + token PNGs");
   }
 
   // --- Init

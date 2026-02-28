@@ -3472,8 +3472,10 @@
     const tokenGuideCenterX = W / 2;
     const tokenGuideCenterY = H * 0.3425;
     const tokenDiameter = Math.max(1, Math.round(tokenGuideRadius * 2));
-    const tokenSrcX = Math.round(tokenGuideCenterX - tokenGuideRadius);
-    const tokenSrcY = Math.round(tokenGuideCenterY - tokenGuideRadius);
+    const tokenExportCropScale = 1.15;
+    const tokenCropDiameter = tokenDiameter * tokenExportCropScale;
+    const tokenSrcX = Math.round(tokenGuideCenterX - (tokenCropDiameter / 2));
+    const tokenSrcY = Math.round(tokenGuideCenterY - (tokenCropDiameter / 2));
 
     const tokenSource = document.createElement("canvas");
     tokenSource.width = W;
@@ -3490,7 +3492,7 @@
     ct.beginPath();
     ct.arc(tokenDiameter / 2, tokenDiameter / 2, tokenDiameter / 2, 0, Math.PI * 2);
     ct.clip();
-    ct.drawImage(tokenSource, tokenSrcX, tokenSrcY, tokenDiameter, tokenDiameter, 0, 0, tokenDiameter, tokenDiameter);
+    ct.drawImage(tokenSource, tokenSrcX, tokenSrcY, tokenCropDiameter, tokenCropDiameter, 0, 0, tokenDiameter, tokenDiameter);
     ct.restore();
 
     downloadPng(token, `${name}_Token_${levelSuffix}.png`);

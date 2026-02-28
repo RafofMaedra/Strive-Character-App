@@ -697,9 +697,10 @@
             <b style="color:var(--text)">(N)</b> Narrow.
           </p>
           <p>
-            Card Export creates two PNG files:
-            <b style="color:var(--text)">CHARACTERNAME_F.png</b> and
-            <b style="color:var(--text)">CHARACTERNAME_B.png</b>
+            Card Export creates three PNG files:
+            <b style="color:var(--text)">CHARACTERNAME_A_Lvl_X.png</b>,
+            <b style="color:var(--text)">CHARACTERNAME_B_Lvl_X.png</b>, and
+            <b style="color:var(--text)">CHARACTERNAME_Token_Lvl_X.png</b>
             using a 2.5:3.5 layout and transparent rounded corners.
           </p>
           <p>
@@ -3394,6 +3395,8 @@
 
   function exportCardPNGs(){
     const name = safeFileName(data.name);
+    const level = clamp(safeInt(data.level, 1), 1, 12);
+    const levelSuffix = `Lvl_${level}`;
 
     // Guardrail: force-lock portrait while exporting (prevents mid-gesture drift)
     const prevLocked = data.portrait.locked;
@@ -3439,7 +3442,7 @@
     const { fontSize: nameFont, letterSpacing } = getAdaptiveTextStyle(nameText, baseFontSize);
     drawTextBox(cf, nameX, nameY, nameW, nameH, nameText, nameFont, "center", letterSpacing);
 
-    downloadPng(front, `${name}_F.png`);
+    downloadPng(front, `${name}_A_${levelSuffix}.png`);
 
     // ---------- BACK ----------
     const back = document.createElement("canvas");
@@ -3461,12 +3464,41 @@
     const backH = H - (400 * sy);
     drawBackTextBox(cb, backX, backY, backW, backH, data, s);
 
-    downloadPng(back, `${name}_B.png`);
+    downloadPng(back, `${name}_B_${levelSuffix}.png`);
+
+    // ---------- TOKEN ----------
+    // Match the preview guide circle geometry exactly (same relative size + position).
+    const tokenGuideRadius = H * 0.18675;
+    const tokenGuideCenterX = W / 2;
+    const tokenGuideCenterY = H * 0.3425;
+    const tokenDiameter = Math.max(1, Math.round(tokenGuideRadius * 2));
+    const tokenSrcX = Math.round(tokenGuideCenterX - tokenGuideRadius);
+    const tokenSrcY = Math.round(tokenGuideCenterY - tokenGuideRadius);
+
+    const tokenSource = document.createElement("canvas");
+    tokenSource.width = W;
+    tokenSource.height = H;
+    const ts = tokenSource.getContext("2d");
+    drawCoverImage(ts, W, H, portraitImg, data.portrait.zoom, data.portrait.offX, data.portrait.offY);
+
+    const token = document.createElement("canvas");
+    token.width = tokenDiameter;
+    token.height = tokenDiameter;
+    const ct = token.getContext("2d");
+    ct.clearRect(0, 0, tokenDiameter, tokenDiameter);
+    ct.save();
+    ct.beginPath();
+    ct.arc(tokenDiameter / 2, tokenDiameter / 2, tokenDiameter / 2, 0, Math.PI * 2);
+    ct.clip();
+    ct.drawImage(tokenSource, tokenSrcX, tokenSrcY, tokenDiameter, tokenDiameter, 0, 0, tokenDiameter, tokenDiameter);
+    ct.restore();
+
+    downloadPng(token, `${name}_Token_${levelSuffix}.png`);
 
     // Restore lock state
     data.portrait.locked = prevLocked;
     updatePortraitLockUI();
-    toast("Exported card PNGs");
+    toast("Exported card/token PNGs");
   }
 
   // --- Init

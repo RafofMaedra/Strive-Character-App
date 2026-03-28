@@ -1325,6 +1325,7 @@
       customBonusGrit: 0,
       customBonusFocus: 0,
       customTraitsText: "",
+      customNegativeTraitsText: "",
       skills: []
     };
 
@@ -1340,19 +1341,21 @@
       return (text || "").split(/[\n,]+/).map(s=>s.trim()).filter(Boolean).length;
     }
 
+    function traitLines(text){
+      return (text || "").split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+    }
+
     function speciesMeta(){
       if(state.species === "Human") return { bg:1, bf:1, extraSkill:1, traits:[] };
-      if(state.species === "Dwarf") return { bg:2, bf:0, extraSkill:0, traits:["Lowlight Vision"] };
+      if(state.species === "Dwarf") return { bg:2, bf:0, extraSkill:0, traits:["Trait: Lowlight Vision"] };
       if(state.species === "Elf") return { bg:0, bf:3, extraSkill:0, traits:[] };
-      if(state.species === "Seafolk") return { bg:1, bf:1, extraSkill:0, traits:["Underwater Adaptions"] };
+      if(state.species === "Seafolk") return { bg:1, bf:1, extraSkill:0, traits:["Trait: Underwater Adaptions"] };
       if(state.species === "Custom"){
         const bg = clamp(safeInt(state.customBonusGrit,0), 0, 3);
         const bf = clamp(safeInt(state.customBonusFocus,0), 0, 3);
-        const typed = (state.customTraitsText||"")
-          .split(/[\n,]+/)
-          .map(s=>s.trim())
-          .filter(Boolean);
-        return { bg, bf, extraSkill:0, traits: typed };
+        const typed = traitLines(state.customTraitsText).map(t => `Trait: ${t}`);
+        const negative = traitLines(state.customNegativeTraitsText).map(t => `Negative Trait: ${t}`);
+        return { bg, bf, extraSkill:0, traits: typed.concat(negative) };
       }
       return { bg:0, bf:0, extraSkill:0, traits:[] };
     }
@@ -1404,8 +1407,18 @@
           const bg = clamp(safeInt(state.customBonusGrit,0), 0, 3);
           const bf = clamp(safeInt(state.customBonusFocus,0), 0, 3);
           const traitCount = countTraitLines(state.customTraitsText);
-          if(bg + bf + traitCount > 3){
+          const negativeTraitCount = countTraitLines(state.customNegativeTraitsText);
+          const totalUsed = bg + bf + traitCount - negativeTraitCount;
+          if(negativeTraitCount > 0 && traitCount === 0){
+            toast("Add at least 1 positive trait before taking a negative trait");
+            return;
+          }
+          if(totalUsed > 3){
             toast("Grit + Focus + Traits exceed 3 points total");
+            return;
+          }
+          if(totalUsed < 0){
+            toast("Negative traits cannot increase points above the base pool");
             return;
           }
         }
@@ -1431,7 +1444,7 @@
           data.skills = state.skills.slice(0);
 
           if(sm.traits.length){
-            const lines = sm.traits.map(t => `• Trait: ${t}`);
+            const lines = sm.traits.map(t => `• ${t}`);
             data.features_text = lines.join("\n");
           }
 
@@ -1494,6 +1507,10 @@
             <div class="field span12">
               <label>Traits (one per line)</label>
               <textarea id="cTraits" class="mono" style="min-height:90px;" placeholder="Lowlight Vision&#10;Underwater Adaptions"></textarea>
+            </div>
+            <div class="field span12">
+              <label>Negative Traits (one per line)</label>
+              <textarea id="cNegativeTraits" class="mono" style="min-height:90px;" placeholder="Light Sensitivity"></textarea>
               <div class="pill" id="cRemain" style="margin-top:8px;">Points: 0/3</div>
               <div class="pill" style="margin-top:8px;">Examples: ${TRAIT_EXAMPLES.join(", ")}</div>
             </div>
@@ -1507,12 +1524,14 @@
       const cG = box.querySelector("#cGrit");
       const cF = box.querySelector("#cFocus");
       const cT = box.querySelector("#cTraits");
+      const cNT = box.querySelector("#cNegativeTraits");
       const cR = box.querySelector("#cRemain");
 
       sel.value = state.species;
       cG.value = String(state.customBonusGrit);
       cF.value = String(state.customBonusFocus);
       cT.value = String(state.customTraitsText || "");
+      cNT.value = String(state.customNegativeTraitsText || "");
 
       function update(){
         state.species = sel.value;
@@ -1527,11 +1546,13 @@
           const bg = clamp(safeInt(state.customBonusGrit,0), 0, 3);
           const bf = clamp(safeInt(state.customBonusFocus,0), 0, 3);
           const traitCount = countTraitLines(state.customTraitsText);
-          const totalUsed = bg + bf + traitCount;
+          const negativeTraitCount = countTraitLines(state.customNegativeTraitsText);
+          const totalUsed = bg + bf + traitCount - negativeTraitCount;
           const overBudget = totalUsed > 3;
-          info.textContent = `Custom: +${bg} Grit, +${bf} Focus, ${traitCount} trait(s).`;
-          cR.textContent = `Points: ${totalUsed}/3 (Grit:${bg} + Focus:${bf} + Traits:${traitCount})`;
-          cR.style.color = overBudget ? "var(--danger)" : "";
+          const underBase = totalUsed < 0 || (negativeTraitCount > 0 && traitCount === 0);
+          info.textContent = `Custom: +${bg} Grit, +${bf} Focus, ${traitCount} trait(s), ${negativeTraitCount} negative trait(s).`;
+          cR.textContent = `Points: ${totalUsed}/3 (Grit:${bg} + Focus:${bf} + Traits:${traitCount} - Negative Traits:${negativeTraitCount})`;
+          cR.style.color = (overBudget || underBase) ? "var(--danger)" : "";
         } else info.textContent = "";
       }
 
@@ -1541,6 +1562,7 @@
         state.customBonusGrit = bg;
         state.customBonusFocus = bf;
         state.customTraitsText = cT.value || "";
+        state.customNegativeTraitsText = cNT.value || "";
         update();
       }
 
@@ -1548,6 +1570,7 @@
       cG.addEventListener("input", ()=>enforceCustomSum("G"));
       cF.addEventListener("input", ()=>enforceCustomSum("F"));
       cT.addEventListener("input", ()=>{ state.customTraitsText = cT.value || ""; update(); });
+      cNT.addEventListener("input", ()=>{ state.customNegativeTraitsText = cNT.value || ""; update(); });
 
       update();
       return box;
